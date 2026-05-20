@@ -5,7 +5,14 @@
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from core.ingestion.pipeline import IngestionPipeline
 from core.inference.engine import ContextEngine
+from core.inference.prompt_builder import PromptBuilder
+from core.inference.retriever import HybridRetriever
+from core.storage.graph import GraphStore
+from core.storage.metadata import MetadataStore
+from core.storage.vectors import VectorStore
 
 console = Console()
 
@@ -18,7 +25,17 @@ def main():
 
     # --- 1. Create the engine ---
     console.print("\n[yellow]Step 1:[/yellow] Starting engine...")
-    engine = ContextEngine()
+    graph_store = GraphStore()
+    vector_store = VectorStore()
+    metadata_store = MetadataStore()
+    pipeline = IngestionPipeline(
+        vector_store=vector_store,
+        graph_store=graph_store,
+        metadata_store=metadata_store,
+    )
+    retriever = HybridRetriever(graph_store=graph_store, vector_store=vector_store)
+    prompt_builder = PromptBuilder()
+    engine = ContextEngine(retriever=retriever, prompt_builder=prompt_builder)
 
     # --- 2. Check Ollama is reachable ---
     console.print("\n[yellow]Step 2:[/yellow] Checking Ollama connection...")
@@ -63,8 +80,18 @@ def main():
     it requires a Google Cloud account which creates vendor lock-in.
     """
 
-    engine.ingest_text(sample_doc_1, source="meeting_notes_oct14.txt")
-    engine.ingest_text(sample_doc_2, source="vendor_evaluation_sep24.txt")
+    pipeline.process_text(
+        text=sample_doc_1,
+        doc_id="phase1_meeting_notes_oct14",
+        source="meeting_notes_oct14.txt",
+        metadata={"title": "Project Phoenix — Meeting Notes — October 14, 2024"},
+    )
+    pipeline.process_text(
+        text=sample_doc_2,
+        doc_id="phase1_vendor_eval_sep24",
+        source="vendor_evaluation_sep24.txt",
+        metadata={"title": "Vendor Evaluation — Cloud Storage — September 2024"},
+    )
 
     # --- 4. Ask questions ---
     console.print("\n[yellow]Step 4:[/yellow] Running test queries...\n")
@@ -92,7 +119,7 @@ def main():
 
     console.print(Panel.fit(
         f"[bold green]Phase 1 complete![/bold green]\n"
-        f"Vector store contains {engine.vector_store.count()} chunks.",
+        f"Vector store contains {vector_store.count()} chunks.",
         border_style="green"
     ))
 
