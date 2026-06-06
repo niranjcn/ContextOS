@@ -1,0 +1,169 @@
+# ==============================================================================
+# ContextOS — API Deployment, Service, PVC, and PodDisruptionBudget
+# ==============================================================================
+# The FastAPI backend runs with 2 replicas for high availability.
+# A PodDisruptionBudget ensures at least 1 pod is always running
+# during rolling updates or node maintenance.
+# ==============================================================================
+
+---
+# --------------------------------------------------------------------------
+# PersistentVolumeClaim — Storage for ChromaDB and Kuzu graph data
+# --------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-data-pvc
+  namespace: contextos
+  labels:
+    app: contextos
+    component: api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      # 10Gi is generous for ChromaDB embeddings and the Kuzu graph.
+      # Monitor usage with `kubectl exec` and resize if needed.
+      storage: 10Gi
+
+---
+# --------------------------------------------------------------------------
+# Deployment — ContextOS FastAPI Backend
+# --------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contextos-api
+  namespace: contextos
+  labels:
+    app: contextos
+    component: api
+spec:
+  # 2 replicas = high availability. If one pod crashes or gets rescheduled,
+  # the other continues serving requests with zero downtime.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: contextos
+      component: api
+  # Rolling update strategy: replace pods one at a time so there's
+  # always at least 1 pod running during deployments.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1          # Allow 1 extra pod during updates (temporarily 3 pods)
+      maxUnavailable: 0    # Never have fewer than 2 running pods
+  template:
+    metadata:
+      labels:
+        app: contextos
+        component: api
+    spec:
+      containers:
+        - name: api
+          # IMPORTANT: Replace YOUR_REGISTRY with your actual ECR URL.
+          # Example: 123456789.dkr.ecr.us-east-1.amazonaws.com/contextos-api
+          # The IMAGE_TAG placeholder is replaced by the CI/CD pipeline.
+          image: YOUR_REGISTRY/contextos-api:IMAGE_TAG  # Replace with your ECR URL
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          # Load all ConfigMap and Secret values as environment variables.
+          # envFrom is cleaner than listing each variable individually.
+          envFrom:
+            - configMapRef:
+                name: contextos-config
+            - secretRef:
+                name: contextos-secrets
+          resources:
+            requests:
+              # Minimum guaranteed resources. The Kubernetes scheduler uses
+              # these values to decide which node to place the pod on.
+              memory: "1Gi"
+              cpu: "500m"   # 500m = 0.5 CPU cores
+            limits:
+              # Maximum allowed. Pod gets OOM-killed if it exceeds memory,
+              # or CPU-throttled if it exceeds CPU.
+              memory: "2Gi"
+              cpu: "2"
+          volumeMounts:
+            - name: data-storage
+              mountPath: /data
+          # Liveness probe — Kubernetes restarts the pod if this fails.
+          # Use for detecting deadlocks or hung processes.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            # Wait 30s before first check (give the app time to start)
+            initialDelaySeconds: 30
+            # Check every 30 seconds
+            periodSeconds: 30
+            # Pod is considered dead after 3 consecutive failures
+            failureThreshold: 3
+            timeoutSeconds: 5
+          # Readiness probe — Kubernetes removes the pod from the Service
+          # endpoints if this fails. Use for temporary unavailability
+          # (e.g., loading a model, running migrations).
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            # Check sooner than liveness — we want to route traffic ASAP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+      volumes:
+        - name: data-storage
+          persistentVolumeClaim:
+            claimName: api-data-pvc
+
+---
+# --------------------------------------------------------------------------
+# Service — Internal DNS entry for the API
+# --------------------------------------------------------------------------
+# The dashboard's nginx config and the Ingress controller route to this service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: contextos
+  labels:
+    app: contextos
+    component: api
+spec:
+  type: ClusterIP
+  selector:
+    app: contextos
+    component: api
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+
+---
+# --------------------------------------------------------------------------
+# PodDisruptionBudget — Protect availability during maintenance
+# --------------------------------------------------------------------------
+# During voluntary disruptions (node upgrades, `kubectl drain`, cluster
+# autoscaler), Kubernetes will NEVER evict a pod if doing so would leave
+# fewer than minAvailable pods running. This prevents downtime.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: contextos
+  labels:
+    app: contextos
+    component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: contextos
+      component: api

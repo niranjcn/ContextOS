@@ -1,4 +1,7 @@
-.PHONY: install install-dev run-api run-dashboard run-all test test-fast lint format check-ollama pull-models connect-gmail sync-all
+.PHONY: install install-dev run-api run-dashboard run-all test test-fast lint format check-ollama pull-models connect-gmail sync-all \
+	docker-build docker-run docker-stop docker-logs docker-test \
+	terraform-init terraform-plan terraform-apply terraform-destroy \
+	k8s-deploy k8s-status k8s-logs
 
 # ---- Setup ----
 
@@ -71,3 +74,54 @@ cli-status:
 
 cli-serve:
 	python -m cli.main serve
+
+# ---- Docker ----
+
+docker-build:
+	docker build -t contextos-api:latest .
+	docker build -t contextos-dashboard:latest ./dashboard
+
+docker-run:
+	docker-compose up -d
+
+docker-stop:
+	docker-compose down
+
+docker-logs:
+	docker-compose logs -f
+
+docker-test:
+	@echo "Starting stack and running smoke tests..."
+	docker-compose up -d
+	@echo "Waiting 10 seconds for services to start..."
+	sleep 10
+	curl -f http://localhost:8000/health
+	curl -X POST http://localhost:8000/query \
+		-H "Content-Type: application/json" \
+		-d '{"question": "test"}'
+	@echo "\nSmoke tests passed!"
+
+# ---- Terraform (AWS Infrastructure) ----
+
+terraform-init:
+	cd terraform && terraform init
+
+terraform-plan:
+	cd terraform && terraform plan
+
+terraform-apply:
+	cd terraform && terraform apply -auto-approve
+
+terraform-destroy:
+	cd terraform && terraform destroy
+
+# ---- Kubernetes ----
+
+k8s-deploy:
+	kubectl apply -f k8s/ --namespace contextos
+
+k8s-status:
+	kubectl get all --namespace contextos
+
+k8s-logs:
+	kubectl logs -f deployment/contextos-api --namespace contextos

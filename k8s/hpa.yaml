@@ -1,0 +1,66 @@
+# ==============================================================================
+# ContextOS — HorizontalPodAutoscaler (HPA)
+# ==============================================================================
+# Automatically scales the API deployment between 2 and 10 pods based on
+# CPU and memory utilization. When load increases, Kubernetes spins up
+# more API pods. When load drops, it scales back down to save costs.
+#
+# NOTE: Ollama is intentionally NOT auto-scaled because:
+#   - It's stateful (models stored on PVC)
+#   - Model loading takes 30-60 seconds (too slow for reactive scaling)
+#   - Each replica needs its own PVC with the full model weights
+#   - Scaling the API layer is sufficient for most workloads
+#
+# Prerequisites:
+#   - metrics-server must be installed in the cluster
+#   - Install: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+# ==============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: contextos
+  labels:
+    app: contextos
+    component: api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: contextos-api
+  # Minimum 2 pods ensures high availability (matches the PDB minAvailable: 1)
+  minReplicas: 2
+  # Maximum 10 pods — adjust based on your budget and expected peak load.
+  # Each pod requests 500m CPU and 1Gi memory, so 10 pods = 5 CPUs + 10Gi RAM.
+  maxReplicas: 10
+  metrics:
+    # Scale up when average CPU usage across all pods exceeds 70%
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    # Scale up when average memory usage exceeds 80%
+    # (useful for catching memory-heavy embedding operations)
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    # Scale up aggressively (handle traffic spikes quickly)
+    scaleUp:
+      stabilizationWindowSeconds: 60    # Wait 60s before scaling up again
+      policies:
+        - type: Pods
+          value: 2                       # Add at most 2 pods at a time
+          periodSeconds: 60
+    # Scale down slowly (avoid flapping between high and low replica counts)
+    scaleDown:
+      stabilizationWindowSeconds: 300   # Wait 5 minutes before scaling down
+      policies:
+        - type: Pods
+          value: 1                       # Remove at most 1 pod at a time
+          periodSeconds: 120             # Every 2 minutes

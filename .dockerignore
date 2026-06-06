@@ -1,0 +1,73 @@
+# ==============================================================================
+# .dockerignore — Exclude files from Docker build context
+# ==============================================================================
+# Without this file, `docker build` copies EVERYTHING in the project
+# directory into the build context. This file keeps the context small
+# and prevents sensitive files from accidentally ending up in images.
+# ==============================================================================
+
+# Python virtual environment (~500MB+ — never needed in the container)
+.venv/
+venv/
+env/
+
+# Git history (can be huge and is never needed at runtime)
+.git/
+.gitignore
+
+# Python bytecode (rebuilt inside the container anyway)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data directories (mounted as volumes, not baked into the image)
+data/
+chroma_db/
+kuzu_db/
+.contextos/
+
+# Secrets (NEVER bake credentials into a Docker image)
+secrets/
+.env
+.env.local
+.env.example
+google_token.json
+google_credentials.json
+
+# Dashboard node_modules (dashboard has its own Dockerfile)
+dashboard/node_modules/
+dashboard/dist/
+
+# Tests (not needed in production image)
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation (not needed at runtime)
+*.md
+LICENSE
+MASTER_PROMPT.md
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Terraform and Kubernetes configs (infrastructure, not application)
+terraform/
+k8s/
+Jenkinsfile
+.github/
+
+# Build artifacts
+*.tar.gz
+*.whl
+*.egg-info/
+dist/
+build/

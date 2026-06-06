@@ -1,0 +1,38 @@
+# ==============================================================================
+# ContextOS — ConfigMap (Non-Secret Configuration)
+# ==============================================================================
+# ConfigMaps store configuration that ISN'T sensitive. These values are
+# injected as environment variables into pods via envFrom.
+#
+# To update: edit this file and run `kubectl apply -f k8s/configmap.yaml`
+# Pods will pick up new values on their next restart.
+# ==============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contextos-config
+  namespace: contextos
+  labels:
+    app: contextos
+data:
+  # The LLM model that Ollama serves for inference
+  OLLAMA_MODEL: "llama3.2"
+
+  # Sentence-transformers model for generating embeddings (vector search)
+  EMBEDDING_MODEL: "all-MiniLM-L6-v2"
+
+  # Ollama service URL — uses the Kubernetes Service DNS name.
+  # Format: <service-name>.<namespace>.svc.cluster.local
+  # The short form <service-name> also works within the same namespace.
+  OLLAMA_HOST: "http://ollama-service:11434"
+
+  # FastAPI bind address — 0.0.0.0 means listen on all interfaces
+  # (required inside containers; 127.0.0.1 would reject external traffic)
+  API_HOST: "0.0.0.0"
+
+  # API port — must match the containerPort in the deployment
+  API_PORT: "8000"
+
+  # Gmail connector — disabled by default. Enable only after setting up
+  # OAuth credentials in the contextos-secrets Secret.
+  ENABLE_GMAIL: "false"

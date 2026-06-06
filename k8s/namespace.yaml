@@ -1,0 +1,15 @@
+# ==============================================================================
+# ContextOS — Kubernetes Namespace
+# ==============================================================================
+# Namespaces isolate resources. Everything ContextOS-related lives here,
+# keeping it separate from other apps on the same cluster.
+# Apply first: kubectl apply -f k8s/namespace.yaml
+# ==============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: contextos
+  labels:
+    app: contextos
+    # Used by network policies and monitoring tools to identify this namespace
+    environment: production
