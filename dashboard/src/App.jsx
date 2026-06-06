@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react'
+import { api } from './api'
 import QueryBox from './components/QueryBox'
 import GraphViewer from './components/GraphViewer'
 import IngestStatus from './components/IngestStatus'
+import StatusPanel from './components/StatusPanel'
 
-const API_BASE = 'http://127.0.0.1:8000'
+const TABS = [
+  { id: 'ask',   label: 'Ask',             icon: '🔍' },
+  { id: 'graph', label: 'Knowledge Graph', icon: '🕸️' },
+  { id: 'ingest',label: 'Ingest',          icon: '📥' },
+  { id: 'status',label: 'Status',          icon: '📊' },
+]
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('ask')
   const [health, setHealth] = useState(null)
 
   useEffect(() => {
@@ -16,51 +24,85 @@ export default function App() {
 
   async function fetchHealth() {
     try {
-      const res = await fetch(`${API_BASE}/health`)
-      const data = await res.json()
+      const data = await api.getHealth()
       setHealth(data)
     } catch {
-      setHealth({ status: 'offline', ollama_running: false, models_available: [], vector_count: 0, graph_node_count: 0, uptime_seconds: 0 })
+      setHealth({
+        status: 'offline',
+        ollama_running: false,
+        models_available: [],
+        vector_count: 0,
+        graph_node_count: 0,
+        uptime_seconds: 0,
+      })
     }
   }
 
-  const statusClass = health?.status === 'healthy' ? 'healthy' : health?.status === 'degraded' ? 'degraded' : 'offline'
+  const statusClass =
+    health?.status === 'healthy'  ? 'healthy' :
+    health?.status === 'degraded' ? 'degraded' : 'offline'
 
   return (
     <div className="app">
+      {/* ---- Header ---- */}
       <header className="header">
-        <div>
-          <h1>⚡ ContextOS</h1>
+        <div className="header-left">
+          <h1 className="logo">
+            <span className="logo-icon">⚡</span> ContextOS
+          </h1>
           <p className="tagline">Your private AI memory layer</p>
         </div>
         <div className={`status-badge ${statusClass}`}>
           <span className="status-dot" />
-          {health?.status || 'Connecting...'}
+          {health?.status || 'Connecting…'}
         </div>
       </header>
 
-      <div className="grid">
-        <div className="card">
-          <h3>Ollama</h3>
-          <div className="value">{health?.ollama_running ? '✓ Running' : '✗ Offline'}</div>
+      {/* ---- Stat Cards ---- */}
+      <div className="stat-grid">
+        <div className="stat-card">
+          <div className="stat-label">Ollama</div>
+          <div className={`stat-value ${health?.ollama_running ? 'text-success' : 'text-error'}`}>
+            {health?.ollama_running ? '✓ Running' : '✗ Offline'}
+          </div>
         </div>
-        <div className="card">
-          <h3>Vectors</h3>
-          <div className="value">{health?.vector_count?.toLocaleString() ?? '—'}</div>
+        <div className="stat-card">
+          <div className="stat-label">Vectors</div>
+          <div className="stat-value">{health?.vector_count?.toLocaleString() ?? '—'}</div>
         </div>
-        <div className="card">
-          <h3>Graph Nodes</h3>
-          <div className="value">{health?.graph_node_count?.toLocaleString() ?? '—'}</div>
+        <div className="stat-card">
+          <div className="stat-label">Graph Nodes</div>
+          <div className="stat-value">{health?.graph_node_count?.toLocaleString() ?? '—'}</div>
         </div>
-        <div className="card">
-          <h3>Models</h3>
-          <div className="value">{health?.models_available?.length ?? 0}</div>
+        <div className="stat-card">
+          <div className="stat-label">Models</div>
+          <div className="stat-value">{health?.models_available?.length ?? 0}</div>
         </div>
       </div>
 
-      <QueryBox apiBase={API_BASE} />
-      <GraphViewer apiBase={API_BASE} />
-      <IngestStatus apiBase={API_BASE} />
+      {/* ---- Tab Navigation ---- */}
+      <nav className="tab-nav" role="tablist">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={`tab-btn ${activeTab === tab.id ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <span className="tab-icon">{tab.icon}</span>
+            <span className="tab-label">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* ---- Tab Content ---- */}
+      <main className="tab-content">
+        {activeTab === 'ask'    && <QueryBox />}
+        {activeTab === 'graph'  && <GraphViewer />}
+        {activeTab === 'ingest' && <IngestStatus />}
+        {activeTab === 'status' && <StatusPanel />}
+      </main>
     </div>
   )
 }

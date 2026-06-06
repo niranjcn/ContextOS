@@ -88,6 +88,16 @@ class IngestionPipeline:
         if not doc_id:
             raise ValueError("Document must have an 'id' field.")
 
+        # Skip already-processed documents
+        if self._metadata_store.is_processed(doc_id):
+            logger.info("Document %s already processed, skipping.", doc_id)
+            return {
+                "doc_id": doc_id,
+                "chunks_created": 0,
+                "entities": {},
+                "status": "skipped",
+            }
+
         if not content or not content.strip():
             logger.warning("Document %s has empty content, skipping.", doc_id)
             return {
@@ -257,3 +267,93 @@ class IngestionPipeline:
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         return self.process_document(document)
+
+    def ingest_file(self, file_path: str) -> dict[str, Any]:
+        """
+        Ingest a file by detecting its type and extracting text content.
+
+        Supports .txt, .md, .pdf, and .docx files. Uses pdfplumber for PDF
+        extraction and python-docx for DOCX extraction, with fallback to
+        raw text reading if those libraries are not available.
+
+        Args:
+            file_path: Path to the file to ingest.
+
+        Returns:
+            Processing result dict from process_text.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ValueError: If the file type is unsupported.
+        """
+        import hashlib
+        from pathlib import Path
+
+        path = Path(file_path).resolve()
+
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        suffix = path.suffix.lower()
+        supported = {".txt", ".md", ".pdf", ".docx"}
+        if suffix not in supported:
+            raise ValueError(
+                f"Unsupported file type '{suffix}'. "
+                f"Supported: {', '.join(sorted(supported))}"
+            )
+
+        content = ""
+
+        if suffix in (".txt", ".md"):
+            content = path.read_text(encoding="utf-8", errors="replace")
+
+        elif suffix == ".pdf":
+            try:
+                import pdfplumber
+
+                with pdfplumber.open(str(path)) as pdf:
+                    pages = [page.extract_text() or "" for page in pdf.pages]
+                    content = "\n\n".join(pages)
+            except ImportError:
+                logger.warning(
+                    "pdfplumber not installed. Falling back to raw text read for PDF."
+                )
+                content = path.read_text(encoding="utf-8", errors="replace")
+
+        elif suffix == ".docx":
+            try:
+                import docx
+
+                doc = docx.Document(str(path))
+                content = "\n\n".join(
+                    paragraph.text for paragraph in doc.paragraphs if paragraph.text
+                )
+            except ImportError:
+                logger.warning(
+                    "python-docx not installed. Falling back to raw text read for DOCX."
+                )
+                content = path.read_text(encoding="utf-8", errors="replace")
+
+        if not content.strip():
+            logger.warning("File %s has no extractable content.", path)
+            return {
+                "doc_id": "",
+                "chunks_created": 0,
+                "entities": {},
+                "status": "skipped_empty",
+            }
+
+        # Generate stable ID from file path
+        doc_id = f"file_{hashlib.sha256(str(path).encode()).hexdigest()[:16]}"
+
+        return self.process_text(
+            text=content,
+            doc_id=doc_id,
+            source="file_ingest",
+            metadata={
+                "filename": path.name,
+                "filepath": str(path),
+                "extension": suffix,
+                "size_bytes": path.stat().st_size,
+            },
+        )

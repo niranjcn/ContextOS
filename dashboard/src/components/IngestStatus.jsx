@@ -1,83 +1,181 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { api } from '../api'
 
-export default function IngestStatus({ apiBase }) {
+export default function IngestStatus() {
   const [stats, setStats] = useState(null)
   const [text, setText] = useState('')
   const [docId, setDocId] = useState('')
+  const [source, setSource] = useState('manual')
   const [ingesting, setIngesting] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState(null)
+  const fileRef = useRef(null)
 
   useEffect(() => { fetchStats() }, [])
 
   async function fetchStats() {
     try {
-      const res = await fetch(`${apiBase}/ingest/status`)
-      if (res.ok) setStats(await res.json())
+      const data = await api.getIngestStatus()
+      setStats(data)
     } catch { /* API may not be running */ }
   }
 
-  async function handleIngest(e) {
+  async function handleTextIngest(e) {
     e.preventDefault()
     if (!text.trim() || !docId.trim()) return
 
     setIngesting(true)
     setResult(null)
+    setError(null)
+
     try {
-      const res = await fetch(`${apiBase}/ingest/text`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, doc_id: docId, source: 'dashboard' }),
-      })
-      const data = await res.json()
+      const data = await api.ingestText(text, docId, source)
       setResult(data)
+      setText('')
+      setDocId('')
       fetchStats()
-      if (res.ok) { setText(''); setDocId('') }
     } catch (err) {
-      setResult({ status: 'error', error: err.message })
+      setError(err.message)
     } finally {
       setIngesting(false)
     }
   }
 
-  return (
-    <div className="ingest-section">
-      <h2 className="section-title">📥 Ingest Content</h2>
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
 
+    setUploading(true)
+    setUploadResult(null)
+    setError(null)
+
+    try {
+      const data = await api.uploadFile(file)
+      setUploadResult(data)
+      fetchStats()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <div className="panel">
+      <h2 className="section-title">
+        <span className="section-icon">📥</span> Ingest Content
+      </h2>
+
+      {/* Stats bar */}
       {stats && (
-        <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-          Total documents: <strong style={{ color: 'var(--text-primary)' }}>{stats.total}</strong>
+        <div className="ingest-stats">
+          <span className="ingest-stat-total">
+            <strong>{stats.total}</strong> documents indexed
+          </span>
           {Object.entries(stats.by_source || {}).map(([src, count]) => (
-            <span key={src}> · {src}: {count}</span>
+            <span key={src} className="ingest-stat-source">
+              {src}: {count}
+            </span>
           ))}
         </div>
       )}
 
-      <form onSubmit={handleIngest}>
-        <input
-          className="query-input"
-          style={{ marginBottom: '0.5rem', width: '100%' }}
-          type="text"
-          value={docId}
-          onChange={(e) => setDocId(e.target.value)}
-          placeholder="Document ID (e.g., meeting_notes_jan15)"
-          disabled={ingesting}
-        />
-        <textarea
-          className="query-input"
-          style={{ width: '100%', minHeight: '100px', resize: 'vertical', marginBottom: '0.5rem' }}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Paste text content to ingest..."
-          disabled={ingesting}
-        />
-        <button className="query-btn" type="submit" disabled={ingesting || !text.trim() || !docId.trim()}>
-          {ingesting ? '⏳ Ingesting...' : '📥 Ingest'}
-        </button>
-      </form>
+      {/* File Upload */}
+      <div className="ingest-section-block">
+        <h3 className="subsection-title">Upload File</h3>
+        <div className="file-upload-wrapper">
+          <input
+            id="file-upload"
+            ref={fileRef}
+            type="file"
+            accept=".txt,.md,.pdf,.docx"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            className="file-input"
+          />
+          <label htmlFor="file-upload" className={`file-label ${uploading ? 'disabled' : ''}`}>
+            {uploading ? (
+              <><span className="spinner">◌</span> Uploading…</>
+            ) : (
+              <>📁 Choose file (.txt, .md, .pdf, .docx)</>
+            )}
+          </label>
+        </div>
+        {uploadResult && (
+          <div className="result-box result-success">
+            ✓ Ingested <strong>{uploadResult.chunks_created}</strong> chunks
+            {' · '}Status: {uploadResult.status}
+          </div>
+        )}
+      </div>
 
-      {result && (
-        <div className="answer-box" style={{ marginTop: '1rem' }}>
-          Status: {result.status} | Chunks: {result.chunks_created ?? 0}
+      {/* Text Ingest */}
+      <div className="ingest-section-block">
+        <h3 className="subsection-title">Paste Text</h3>
+        <form onSubmit={handleTextIngest}>
+          <div className="ingest-fields">
+            <input
+              id="ingest-doc-id"
+              className="query-input"
+              type="text"
+              value={docId}
+              onChange={(e) => setDocId(e.target.value)}
+              placeholder="Document ID (e.g., meeting_notes_jan15)"
+              disabled={ingesting}
+            />
+            <input
+              id="ingest-source"
+              className="query-input"
+              type="text"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              placeholder="Source name"
+              disabled={ingesting}
+            />
+          </div>
+          <textarea
+            id="ingest-text"
+            className="query-input ingest-textarea"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste text content to ingest…"
+            disabled={ingesting}
+          />
+          <button
+            id="ingest-submit"
+            className="btn-primary"
+            type="submit"
+            disabled={ingesting || !text.trim() || !docId.trim()}
+          >
+            {ingesting ? (
+              <><span className="spinner">◌</span> Ingesting…</>
+            ) : (
+              '📥 Ingest Text'
+            )}
+          </button>
+        </form>
+
+        {result && (
+          <div className="result-box result-success">
+            ✓ Ingested <strong>{result.chunks_created}</strong> chunks
+            {result.entities?.people?.length > 0 && (
+              <>, found {result.entities.people.length} people</>
+            )}
+            {result.entities?.organizations?.length > 0 && (
+              <>, {result.entities.organizations.length} orgs</>
+            )}
+            {' · '}Status: {result.status}
+          </div>
+        )}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="error-box">
+          <span className="error-icon">⚠</span> {error}
         </div>
       )}
     </div>

@@ -153,3 +153,65 @@ async def ingest_status() -> IngestStatusResponse:
         raise HTTPException(
             status_code=500, detail=f"Failed to retrieve status: {str(exc)}"
         )
+
+
+@router.delete(
+    "/source/{source_name}",
+    summary="Delete source documents",
+    description="Delete all ingested documents from a specific source connector.",
+)
+async def delete_source(source_name: str) -> dict:
+    """
+    Delete all documents ingested from a specific source.
+
+    Removes records from both the metadata store and the vector store.
+
+    Args:
+        source_name: The source connector name (e.g., 'gmail', 'local_files').
+
+    Returns:
+        A dict with the number of deleted records.
+    """
+    from core.api.main import get_metadata_store, get_vector_store
+
+    metadata_store = get_metadata_store()
+    vector_store = get_vector_store()
+
+    if metadata_store is None:
+        raise HTTPException(status_code=503, detail="Metadata store not initialized.")
+
+    try:
+        # Get all docs for this source before deleting
+        all_docs = metadata_store.get_all_processed()
+        source_docs = [d for d in all_docs if d.get("source") == source_name]
+        deleted_count = len(source_docs)
+
+        # Remove from metadata store
+        for doc in source_docs:
+            metadata_store.remove(doc["doc_id"])
+
+        # Remove from vector store
+        if vector_store:
+            try:
+                vector_store.delete_by_source(source_name)
+            except Exception as vec_exc:
+                logger.warning(
+                    "Vector store cleanup for source '%s' failed: %s",
+                    source_name,
+                    vec_exc,
+                )
+
+        logger.info(
+            "Deleted %d documents from source '%s'.", deleted_count, source_name
+        )
+        return {
+            "source": source_name,
+            "deleted_count": deleted_count,
+            "status": "success",
+        }
+    except Exception as exc:
+        logger.error("Failed to delete source '%s': %s", source_name, exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete source '{source_name}': {str(exc)}",
+        )

@@ -1,7 +1,8 @@
 """
 ContextOS CLI — Typer-based terminal interface.
 
-Provides commands for querying, ingesting, transcribing, graph exploration,
+Provides commands for querying, ingesting, transcribing, drafting,
+meeting briefs, decision search, graph exploration, connector management,
 system health checks, and starting the API server.
 """
 
@@ -99,16 +100,8 @@ def ingest(
         table.add_row("Errors", str(stats["errors"]))
         console.print(table)
     else:
-        content = target.read_text(encoding="utf-8", errors="replace")
-        import hashlib
-        doc_id = hashlib.sha256(f"{target}".encode()).hexdigest()[:16]
         with console.status(f"[bold green]Ingesting {target.name}..."):
-            result = pipeline.process_text(
-                text=content,
-                doc_id=f"cli_{doc_id}",
-                source="cli_ingest",
-                metadata={"filename": target.name, "filepath": str(target)},
-            )
+            result = pipeline.ingest_file(str(target))
         console.print(
             Panel(
                 f"Status: {result['status']}\n"
@@ -154,6 +147,127 @@ def transcribe(
             border_style="green",
         )
     )
+
+
+@app.command()
+def draft(
+    instruction: str = typer.Argument(..., help="What to draft (e.g., 'Tell Priya the delivery is delayed')."),
+    recipient: str = typer.Option("", help="Optional recipient name for context lookup."),
+) -> None:
+    """Generate a smart draft email or message in your writing voice."""
+    from core.inference.engine import ContextEngine
+    from core.inference.prompt_builder import PromptBuilder
+    from core.inference.retriever import HybridRetriever
+    from core.storage.graph import GraphStore
+    from core.storage.vectors import VectorStore
+    from features.smart_draft import SmartDraft
+
+    with console.status("[bold green]Initializing engine..."):
+        graph_store = GraphStore()
+        vector_store = VectorStore()
+        retriever = HybridRetriever(graph_store, vector_store)
+        prompt_builder = PromptBuilder()
+        engine = ContextEngine(retriever, prompt_builder)
+
+    if not engine.is_ready():
+        console.print("[bold red]Error:[/] Ollama is not running.")
+        raise typer.Exit(1)
+
+    with console.status("[bold green]Drafting..."):
+        sd = SmartDraft(engine, retriever)
+        result = sd.draft_content(topic=instruction, content_type="email")
+
+    console.print()
+    console.print(Panel(result.answer, title="Draft", border_style="cyan"))
+    if result.sources:
+        console.print(f"\n[dim]Context sources: {', '.join(result.sources)}[/]")
+
+
+@app.command()
+def brief(
+    title: str = typer.Option(..., help="Meeting title."),
+    attendees: str = typer.Option(..., help="Comma-separated attendee names."),
+    date: str = typer.Option("", help="Meeting date/time string."),
+    agenda: str = typer.Option("", help="Meeting agenda text."),
+) -> None:
+    """Generate a pre-meeting briefing with context about attendees."""
+    from core.inference.engine import ContextEngine
+    from core.inference.prompt_builder import PromptBuilder
+    from core.inference.retriever import HybridRetriever
+    from core.storage.graph import GraphStore
+    from core.storage.vectors import VectorStore
+    from features.meeting_brief import MeetingBrief
+
+    participant_list = [a.strip() for a in attendees.split(",") if a.strip()]
+    if not participant_list:
+        console.print("[bold red]Error:[/] Provide at least one attendee.")
+        raise typer.Exit(1)
+
+    with console.status("[bold green]Initializing engine..."):
+        graph_store = GraphStore()
+        vector_store = VectorStore()
+        retriever = HybridRetriever(graph_store, vector_store)
+        prompt_builder = PromptBuilder()
+        engine = ContextEngine(retriever, prompt_builder)
+
+    if not engine.is_ready():
+        console.print("[bold red]Error:[/] Ollama is not running.")
+        raise typer.Exit(1)
+
+    with console.status("[bold green]Generating brief..."):
+        mb = MeetingBrief(engine, retriever)
+        result = mb.generate_brief(
+            title=title,
+            participants=participant_list,
+            date=date,
+            agenda=agenda,
+        )
+
+    console.print()
+    console.print(Panel(result.answer, title=f"Brief: {title}", border_style="magenta"))
+
+
+@app.command()
+def decisions(
+    search_query: str = typer.Argument(
+        "", help="Search query for decisions. Leave empty for recent."
+    ),
+    person: str = typer.Option("", help="Filter decisions by person name."),
+    limit: int = typer.Option(10, help="Maximum results to return."),
+) -> None:
+    """Search or list decisions from the knowledge base."""
+    from core.inference.retriever import HybridRetriever
+    from core.storage.graph import GraphStore
+    from core.storage.vectors import VectorStore
+    from features.decision_log import DecisionLog
+
+    with console.status("[bold green]Initializing..."):
+        graph_store = GraphStore()
+        vector_store = VectorStore()
+        retriever = HybridRetriever(graph_store, vector_store)
+        log = DecisionLog(retriever, vector_store)
+
+    if person:
+        results = log.get_decisions_by_person(person, k=limit)
+    elif search_query:
+        results = log.search_decisions(search_query, k=limit)
+    else:
+        results = log.get_recent_decisions(k=limit)
+
+    if not results:
+        console.print("[dim]No decisions found.[/]")
+        return
+
+    for i, d in enumerate(results, 1):
+        content = d.get("content", "")[:200]
+        source = d.get("source", "unknown")
+        console.print(
+            Panel(
+                f"{content}{'...' if len(d.get('content', '')) > 200 else ''}",
+                title=f"[{i}] {source}",
+                border_style="yellow",
+            )
+        )
 
 
 # ---- Graph subcommands ----
@@ -202,6 +316,150 @@ def graph_docs(
     table.add_column("Date", style="dim")
     for doc in docs:
         table.add_row(doc.get("title", ""), doc.get("source", ""), doc.get("date", ""))
+    console.print(table)
+
+
+@graph_app.command("stats")
+def graph_stats() -> None:
+    """Show knowledge graph statistics."""
+    from core.storage.graph import GraphStore
+
+    graph_store = GraphStore()
+    stats = graph_store.get_stats()
+
+    if not stats:
+        console.print("[dim]No graph statistics available.[/]")
+        return
+
+    table = Table(title="Knowledge Graph Statistics")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Count", justify="right", style="green")
+    for key, value in sorted(stats.items()):
+        label = key.replace("_count", "").replace("_", " ").title()
+        table.add_row(label, str(value))
+    console.print(table)
+
+
+# ---- Connector commands ----
+
+@app.command()
+def connect(
+    connector_name: str = typer.Argument(
+        ..., help="Connector to configure: gmail, gdrive"
+    ),
+) -> None:
+    """Authenticate and configure a data connector (gmail, gdrive)."""
+    if connector_name == "gmail":
+        from connectors.gmail import GmailConnector
+
+        c = GmailConnector()
+        if not c.validate_config():
+            console.print(
+                "[bold red]Error:[/] Gmail not configured. "
+                "Place client_secrets.json in your data directory."
+            )
+            raise typer.Exit(1)
+
+        console.print("[bold green]Opening browser for Gmail OAuth...[/]")
+        docs = c.fetch()
+        console.print(f"[green]✓ Gmail connected. Found {len(docs)} emails.[/]")
+
+    elif connector_name == "gdrive":
+        from connectors.gdrive import GDriveConnector
+
+        c = GDriveConnector()
+        if not c.validate_config():
+            console.print(
+                "[bold red]Error:[/] Google Drive not configured. "
+                "Place client_secrets.json in your data directory."
+            )
+            raise typer.Exit(1)
+
+        console.print("[bold green]Opening browser for GDrive OAuth...[/]")
+        docs = c.fetch()
+        console.print(f"[green]✓ GDrive connected. Found {len(docs)} files.[/]")
+
+    else:
+        console.print(
+            f"[bold red]Error:[/] Unknown connector '{connector_name}'. "
+            "Available: gmail, gdrive"
+        )
+        raise typer.Exit(1)
+
+
+@app.command()
+def sync(
+    source: str = typer.Option(
+        "", help="Specific source to sync (gmail, gdrive, local_files, browser_history). "
+        "Leave empty for all enabled."
+    ),
+) -> None:
+    """Run connector sync to ingest new data from configured sources."""
+    from core.ingestion.pipeline import IngestionPipeline
+    from core.storage.graph import GraphStore
+    from core.storage.metadata import MetadataStore
+    from core.storage.vectors import VectorStore
+
+    with console.status("[bold green]Initializing stores..."):
+        metadata_store = MetadataStore()
+        graph_store = GraphStore()
+        vector_store = VectorStore()
+        pipeline = IngestionPipeline(vector_store, graph_store, metadata_store)
+
+    connectors_to_run = []
+
+    if not source or source == "local_files":
+        from connectors.local_files import LocalFileConnector
+        c = LocalFileConnector()
+        if c.validate_config():
+            connectors_to_run.append(c)
+
+    if not source or source == "gmail":
+        try:
+            from connectors.gmail import GmailConnector
+            c = GmailConnector()
+            if c.validate_config():
+                connectors_to_run.append(c)
+        except Exception:
+            pass
+
+    if not source or source == "gdrive":
+        try:
+            from connectors.gdrive import GDriveConnector
+            c = GDriveConnector()
+            if c.validate_config():
+                connectors_to_run.append(c)
+        except Exception:
+            pass
+
+    if not source or source == "browser_history":
+        from connectors.browser_history import BrowserHistoryConnector
+        c = BrowserHistoryConnector()
+        if c.validate_config():
+            connectors_to_run.append(c)
+
+    if not connectors_to_run:
+        console.print("[dim]No enabled connectors found.[/]")
+        return
+
+    table = Table(title="Sync Results")
+    table.add_column("Connector", style="cyan")
+    table.add_column("Fetched", justify="right")
+    table.add_column("New", justify="right", style="green")
+    table.add_column("Skipped", justify="right")
+    table.add_column("Errors", justify="right", style="red")
+
+    for c in connectors_to_run:
+        with console.status(f"[bold green]Syncing {c._name}..."):
+            stats = c.sync(metadata_store=metadata_store, pipeline=pipeline)
+        table.add_row(
+            c._name,
+            str(stats["fetched"]),
+            str(stats["new"]),
+            str(stats["skipped"]),
+            str(stats["errors"]),
+        )
+
     console.print(table)
 
 

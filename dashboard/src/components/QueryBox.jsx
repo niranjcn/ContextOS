@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { api } from '../api'
 
-export default function QueryBox({ apiBase }) {
+export default function QueryBox() {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   async function handleQuery(e) {
     e.preventDefault()
@@ -11,32 +13,31 @@ export default function QueryBox({ apiBase }) {
 
     setLoading(true)
     setAnswer(null)
+    setError(null)
 
     try {
-      const res = await fetch(`${apiBase}/query`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question.trim() }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setAnswer(data)
-      } else {
-        setAnswer({ answer: `Error: ${data.detail || 'Query failed'}`, sources: [] })
-      }
+      const data = await api.query(question.trim())
+      setAnswer(data)
     } catch (err) {
-      setAnswer({ answer: `Connection error: ${err.message}`, sources: [] })
+      setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="query-section">
-      <h2 className="section-title">🔍 Ask ContextOS</h2>
+    <div className="panel">
+      <h2 className="section-title">
+        <span className="section-icon">🔍</span> Ask ContextOS
+      </h2>
+      <p className="section-desc">
+        Ask questions about your documents, emails, meetings — everything in your knowledge base.
+      </p>
+
       <form onSubmit={handleQuery}>
         <div className="query-input-wrapper">
           <input
+            id="query-input"
             className="query-input"
             type="text"
             value={question}
@@ -44,21 +45,50 @@ export default function QueryBox({ apiBase }) {
             placeholder="What did John discuss in last week's meeting?"
             disabled={loading}
           />
-          <button className="query-btn" type="submit" disabled={loading || !question.trim()}>
-            {loading ? '⏳ Thinking...' : 'Ask'}
+          <button
+            id="query-submit"
+            className="btn-primary"
+            type="submit"
+            disabled={loading || !question.trim()}
+          >
+            {loading ? (
+              <>
+                <span className="spinner">◌</span> Thinking…
+              </>
+            ) : (
+              'Ask'
+            )}
           </button>
         </div>
       </form>
 
+      {/* Error state */}
+      {error && (
+        <div className="error-box">
+          <span className="error-icon">⚠</span> {error}
+        </div>
+      )}
+
+      {/* Answer state */}
       {answer && (
-        <div>
+        <div className="answer-container">
           <div className="answer-box">{answer.answer}</div>
-          {answer.sources?.length > 0 && (
-            <div className="answer-meta">
-              Sources: {answer.sources.join(', ')} | Model: {answer.model_used} |
-              Retrieval: {answer.retrieval_time_ms}ms | Inference: {answer.inference_time_ms}ms
-            </div>
-          )}
+          <div className="answer-meta">
+            {answer.sources?.length > 0 && (
+              <span className="meta-item">
+                <strong>Sources:</strong> {answer.sources.join(', ')}
+              </span>
+            )}
+            <span className="meta-item">
+              Model: {answer.model_used}
+            </span>
+            <span className="meta-item">
+              Retrieval: {answer.retrieval_time_ms}ms
+            </span>
+            <span className="meta-item">
+              Inference: {answer.inference_time_ms}ms
+            </span>
+          </div>
         </div>
       )}
     </div>

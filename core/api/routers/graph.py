@@ -46,6 +46,33 @@ async def list_people() -> PersonListResponse:
 
 
 @router.get(
+    "/organizations",
+    summary="List all organizations",
+    description="Returns a list of all organization entities in the knowledge graph.",
+)
+async def list_organizations() -> dict:
+    """List all organizations in the knowledge graph."""
+    from core.api.main import get_graph_store
+
+    graph_store = get_graph_store()
+    if graph_store is None:
+        raise HTTPException(status_code=503, detail="Graph store not initialized.")
+
+    try:
+        results = graph_store.search_entities("")
+        orgs = sorted(
+            {r["name"] for r in results if r.get("type") == "Organization"}
+        )
+        return {"organizations": orgs, "count": len(orgs)}
+    except Exception as exc:
+        logger.error("Failed to list organizations: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve organizations: {str(exc)}",
+        )
+
+
+@router.get(
     "/people/{name}/documents",
     response_model=DocumentListResponse,
     summary="Documents mentioning a person",

@@ -1,86 +1,150 @@
 import React, { useState, useEffect } from 'react'
+import { api } from '../api'
 
-export default function GraphViewer({ apiBase }) {
+export default function GraphViewer() {
   const [people, setPeople] = useState([])
   const [docs, setDocs] = useState([])
+  const [stats, setStats] = useState(null)
+  const [selectedPerson, setSelectedPerson] = useState(null)
+  const [personDocs, setPersonDocs] = useState([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
   const [tab, setTab] = useState('people')
 
   useEffect(() => {
     fetchPeople()
     fetchDocs()
+    fetchStats()
   }, [])
 
   async function fetchPeople() {
     try {
-      const res = await fetch(`${apiBase}/graph/people`)
-      if (res.ok) {
-        const data = await res.json()
-        setPeople(data.people || [])
-      }
+      const data = await api.getPeople()
+      setPeople(data.people || [])
     } catch { /* API may not be running */ }
   }
 
   async function fetchDocs() {
     try {
-      const res = await fetch(`${apiBase}/graph/documents?limit=10`)
-      if (res.ok) {
-        const data = await res.json()
-        setDocs(data.documents || [])
-      }
+      const data = await api.getDocuments(10)
+      setDocs(data.documents || [])
     } catch { /* API may not be running */ }
   }
 
+  async function fetchStats() {
+    try {
+      const data = await api.getStats()
+      setStats(data.stats || {})
+    } catch { /* silent */ }
+  }
+
+  async function handlePersonClick(name) {
+    if (selectedPerson === name) {
+      setSelectedPerson(null)
+      setPersonDocs([])
+      return
+    }
+    setSelectedPerson(name)
+    setLoadingDocs(true)
+    try {
+      const data = await api.getPersonDocs(name)
+      setPersonDocs(data.documents || [])
+    } catch {
+      setPersonDocs([])
+    } finally {
+      setLoadingDocs(false)
+    }
+  }
+
+  const totalPeople = stats?.Person_count ?? people.length
+  const totalDocs = stats?.Document_count ?? docs.length
+
   return (
-    <div className="query-section" style={{ marginBottom: '2rem' }}>
-      <h2 className="section-title">🕸️ Knowledge Graph</h2>
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+    <div className="panel">
+      <h2 className="section-title">
+        <span className="section-icon">🕸️</span> Knowledge Graph
+      </h2>
+
+      {/* Stats badges */}
+      <div className="graph-stats-bar">
+        <span className="graph-badge">{totalPeople} people</span>
+        <span className="graph-badge">{totalDocs} documents</span>
+        {stats?.Organization_count != null && (
+          <span className="graph-badge">{stats.Organization_count} orgs</span>
+        )}
+        {stats?.Topic_count != null && (
+          <span className="graph-badge">{stats.Topic_count} topics</span>
+        )}
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="sub-tabs">
         <button
-          className="query-btn"
-          style={{ padding: '0.5rem 1rem', fontSize: '0.8125rem', opacity: tab === 'people' ? 1 : 0.5 }}
+          className={`sub-tab ${tab === 'people' ? 'sub-tab-active' : ''}`}
           onClick={() => setTab('people')}
         >
           People ({people.length})
         </button>
         <button
-          className="query-btn"
-          style={{ padding: '0.5rem 1rem', fontSize: '0.8125rem', opacity: tab === 'docs' ? 1 : 0.5 }}
+          className={`sub-tab ${tab === 'docs' ? 'sub-tab-active' : ''}`}
           onClick={() => setTab('docs')}
         >
           Documents ({docs.length})
         </button>
       </div>
 
+      {/* People tab */}
       {tab === 'people' && (
         <div>
           {people.length === 0 ? (
-            <p style={{ color: 'var(--text-secondary)' }}>No people in graph yet. Ingest documents to populate.</p>
+            <p className="empty-state">No people in graph yet. Ingest documents to populate.</p>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div className="person-grid">
               {people.map((p) => (
-                <span key={p} style={{
-                  background: 'var(--bg-primary)',
-                  padding: '0.375rem 0.75rem',
-                  borderRadius: '999px',
-                  fontSize: '0.8125rem',
-                  border: '1px solid var(--border)',
-                }}>{p}</span>
+                <button
+                  key={p}
+                  className={`person-card ${selectedPerson === p ? 'person-card-active' : ''}`}
+                  onClick={() => handlePersonClick(p)}
+                >
+                  <span className="person-avatar">{p.charAt(0)}</span>
+                  <span className="person-name">{p}</span>
+                </button>
               ))}
+            </div>
+          )}
+
+          {/* Selected person's documents */}
+          {selectedPerson && (
+            <div className="person-docs">
+              <h3 className="person-docs-title">
+                Documents mentioning <strong>{selectedPerson}</strong>
+              </h3>
+              {loadingDocs ? (
+                <p className="loading-text"><span className="spinner">◌</span> Loading…</p>
+              ) : personDocs.length === 0 ? (
+                <p className="empty-state">No documents found.</p>
+              ) : (
+                personDocs.map((d) => (
+                  <div key={d.doc_id} className="doc-row">
+                    <span className="doc-title">{d.title || d.doc_id}</span>
+                    <span className="doc-meta">{d.source} · {d.date}</span>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
       )}
 
+      {/* Documents tab */}
       {tab === 'docs' && (
         <div>
           {docs.length === 0 ? (
-            <p style={{ color: 'var(--text-secondary)' }}>No documents indexed yet.</p>
+            <p className="empty-state">No documents indexed yet.</p>
           ) : (
             docs.map((d) => (
-              <div key={d.doc_id} className="card" style={{ marginBottom: '0.5rem', padding: '1rem' }}>
-                <strong>{d.title}</strong>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {d.source} · {d.date}
-                </div>
+              <div key={d.doc_id} className="doc-row">
+                <span className="doc-title">{d.title || d.doc_id}</span>
+                <span className="doc-meta">{d.source} · {d.date}</span>
               </div>
             ))
           )}

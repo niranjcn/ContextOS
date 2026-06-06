@@ -12,7 +12,14 @@ from collections import defaultdict
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from core.api.models import QueryRequest, QueryResponse
+from core.api.models import (
+    BriefRequest,
+    BriefResponse,
+    DraftRequest,
+    DraftResponse,
+    QueryRequest,
+    QueryResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +27,7 @@ router = APIRouter(prefix="/query", tags=["query"])
 
 # Simple in-memory rate limiting
 _RATE_LIMIT_WINDOW = 60  # seconds
-_RATE_LIMIT_MAX = 10  # requests per window
+_RATE_LIMIT_MAX = 20  # requests per window
 _request_counts: dict[str, list[float]] = defaultdict(list)
 
 
@@ -154,4 +161,103 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
         raise HTTPException(
             status_code=500,
             detail=f"Streaming query failed: {str(exc)}",
+        )
+
+
+@router.post(
+    "/draft",
+    response_model=DraftResponse,
+    summary="Draft content",
+    description="Generate a draft email or message using context from your knowledge base.",
+)
+async def query_draft(request: DraftRequest) -> DraftResponse:
+    """
+    Generate a smart draft using retrieved context and user writing style.
+
+    Uses the SmartDraft feature to produce content in the user's voice.
+    """
+    from core.api.main import get_engine
+
+    _check_rate_limit()
+
+    engine = get_engine()
+    if engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Engine not initialized. Please wait for startup to complete.",
+        )
+
+    logger.info("Processing draft request: %s...", request.instruction[:50])
+
+    try:
+        from features.smart_draft import SmartDraft
+
+        retriever = engine._retriever
+        draft_engine = SmartDraft(engine, retriever)
+        result = draft_engine.draft_content(
+            topic=request.instruction,
+            content_type="email",
+        )
+        context_sources = result.sources if result.sources else []
+        return DraftResponse(
+            draft=result.answer,
+            context_used=context_sources,
+        )
+    except Exception as exc:
+        logger.error("Draft generation failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Draft generation failed: {str(exc)}",
+        )
+
+
+@router.post(
+    "/brief",
+    response_model=BriefResponse,
+    summary="Generate meeting brief",
+    description="Generate a pre-meeting briefing using context about attendees and topics.",
+)
+async def query_brief(request: BriefRequest) -> BriefResponse:
+    """
+    Generate a meeting brief using knowledge graph context.
+
+    Retrieves information about each attendee and the meeting topic
+    to produce a comprehensive pre-meeting brief.
+    """
+    from core.api.main import get_engine
+
+    _check_rate_limit()
+
+    engine = get_engine()
+    if engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Engine not initialized. Please wait for startup to complete.",
+        )
+
+    logger.info(
+        "Generating brief for '%s' with %d attendees.",
+        request.meeting_title,
+        len(request.attendees),
+    )
+
+    try:
+        from features.meeting_brief import MeetingBrief
+
+        retriever = engine._retriever
+        brief_engine = MeetingBrief(engine, retriever)
+        result = brief_engine.generate_brief(
+            title=request.meeting_title,
+            participants=request.attendees,
+            date=request.meeting_time,
+        )
+        return BriefResponse(
+            brief=result.answer,
+            people_found=request.attendees,
+        )
+    except Exception as exc:
+        logger.error("Brief generation failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Brief generation failed: {str(exc)}",
         )

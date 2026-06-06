@@ -81,6 +81,63 @@ class IngestStatusResponse(BaseModel):
     )
 
 
+# ---- Draft & Brief Models ---- #
+
+class DraftRequest(BaseModel):
+    """Request body for the /query/draft endpoint."""
+
+    instruction: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="What to draft (e.g., 'Tell Priya the delivery is delayed').",
+        examples=["Tell Priya the delivery is delayed by 2 weeks"],
+    )
+    recipient: str = Field(
+        default="",
+        description="Optional recipient name for context lookup.",
+    )
+
+
+class BriefRequest(BaseModel):
+    """Request body for the /query/brief endpoint."""
+
+    meeting_title: str = Field(
+        ...,
+        min_length=1,
+        description="Title of the meeting.",
+        examples=["Q4 Planning"],
+    )
+    attendees: list[str] = Field(
+        ...,
+        min_length=1,
+        description="List of attendee names.",
+        examples=[["Alice", "Bob", "Priya"]],
+    )
+    meeting_time: str = Field(
+        default="",
+        description="Optional meeting time string.",
+    )
+
+
+class DraftResponse(BaseModel):
+    """Response body for the /query/draft endpoint."""
+
+    draft: str = Field(description="The generated draft text.")
+    context_used: list[str] = Field(
+        default_factory=list, description="Sources used for context."
+    )
+
+
+class BriefResponse(BaseModel):
+    """Response body for the /query/brief endpoint."""
+
+    brief: str = Field(description="The generated meeting brief.")
+    people_found: list[str] = Field(
+        default_factory=list, description="People found in the knowledge graph."
+    )
+
+
 # ---- Graph Models ---- #
 
 class PersonListResponse(BaseModel):
