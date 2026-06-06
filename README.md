@@ -201,6 +201,9 @@ contextos/
 ├── cli/
 │   └── main.py                  ← Typer CLI (contextos query, ingest, etc.)
 │
+├── scripts/                     ← standalone demos and local utilities
+│   └── sample_context_demo.py   ← end-to-end demo for local testing
+│
 ├── dashboard/                   ← React control panel
 │   ├── package.json
 │   ├── vite.config.js
