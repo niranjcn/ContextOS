@@ -28,7 +28,8 @@ COPY requirements.txt /tmp/requirements.txt
 # --user installs packages to /root/.local instead of system-wide.
 # This lets us copy just /root/.local in the next stage.
 # --no-cache-dir avoids storing pip's download cache (saves ~100MB).
-RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --user -r /tmp/requirements.txt
 
 # ---------------------------------------------------------------------------
 # STAGE 2 — Runtime: lean image with only what's needed to run the API
@@ -54,7 +55,7 @@ ENV PATH=/root/.local/bin:$PATH
 
 # Download the spaCy English NLP model at build time so the container
 # starts instantly without needing internet access at runtime.
-RUN python -m spacy download en_core_web_sm
+RUN pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 
 # Copy the entire project source code into the container.
 WORKDIR /app
