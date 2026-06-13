@@ -24,14 +24,14 @@ _START_TIME = time.time()
     "",
     response_model=HealthResponse,
     summary="System health check",
-    description="Returns overall system health including Ollama status, " "vector store count, and graph node count.",
+    description="Returns overall system health including inference backend status, " "vector store count, and graph node count.",
 )
 async def health_check() -> HealthResponse:
     """
     Perform a comprehensive health check.
 
-    Returns status of Ollama, available models, vector and graph counts,
-    and server uptime.
+    Returns status of the inference backend, available models/tools,
+    vector and graph counts, and server uptime.
     """
     from core.api.main import get_engine, get_graph_store, get_vector_store
 
@@ -39,12 +39,12 @@ async def health_check() -> HealthResponse:
     vector_store = get_vector_store()
     graph_store = get_graph_store()
 
-    # Check Ollama
-    ollama_running = False
-    models_available: list[str] = []
+    # Check inference backend
+    backend_ready = False
+    backend_info: dict = {}
     if engine:
-        ollama_running = engine.is_ready()
-        models_available = engine.get_available_models()
+        backend_ready = engine.is_ready()
+        backend_info = engine.get_backend_info()
 
     # Vector count
     vector_count = 0
@@ -65,12 +65,13 @@ async def health_check() -> HealthResponse:
 
     uptime = time.time() - _START_TIME
 
-    status = "healthy" if ollama_running else "degraded"
+    status = "healthy" if backend_ready else "degraded"
 
     return HealthResponse(
         status=status,
-        ollama_running=ollama_running,
-        models_available=models_available,
+        ollama_running=backend_ready,
+        models_available=backend_info.get("models_available", []),
+        inference_backend=backend_info,
         vector_count=vector_count,
         graph_node_count=graph_node_count,
         uptime_seconds=round(uptime, 2),

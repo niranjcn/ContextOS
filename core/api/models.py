@@ -169,9 +169,15 @@ class GraphStatsResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Response body for the /health endpoint."""
 
+    model_config = {"protected_namespaces": ()}
+
     status: str = Field(description="Overall system status.")
-    ollama_running: bool = Field(description="Whether Ollama is reachable.")
-    models_available: list[str] = Field(default_factory=list, description="Available Ollama models.")
+    ollama_running: bool = Field(description="Whether the inference backend is reachable.")
+    models_available: list[str] = Field(default_factory=list, description="Available models or tools.")
+    inference_backend: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Details about the active inference backend.",
+    )
     vector_count: int = Field(description="Number of vectors in the store.")
     graph_node_count: int = Field(description="Total number of nodes in the graph.")
     uptime_seconds: float = Field(description="Server uptime in seconds.")

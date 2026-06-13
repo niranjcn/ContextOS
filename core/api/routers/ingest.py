@@ -89,9 +89,30 @@ async def ingest_file(file: UploadFile = File(...)) -> IngestResponse:
         )
 
     try:
-        # Read file content
+        import io
+
+        # Read file content as bytes
         content_bytes = await file.read()
-        content = content_bytes.decode("utf-8", errors="replace")
+
+        # Extract text based on file type
+        if extension == ".pdf":
+            try:
+                import pdfplumber
+
+                with pdfplumber.open(io.BytesIO(content_bytes)) as pdf:
+                    pages = [page.extract_text() or "" for page in pdf.pages]
+                    content = "\n\n".join(pages)
+            except ImportError:
+                logger.warning("pdfplumber not installed, trying pypdf...")
+                import pypdf
+                reader = pypdf.PdfReader(io.BytesIO(content_bytes))
+                content = "\n\n".join(page.extract_text() or "" for page in reader.pages)
+        elif extension == ".docx":
+            import docx
+            doc = docx.Document(io.BytesIO(content_bytes))
+            content = "\n\n".join(p.text for p in doc.paragraphs if p.text)
+        else:
+            content = content_bytes.decode("utf-8", errors="replace")
 
         # Generate document ID from content hash
         content_hash = hashlib.sha256(content_bytes).hexdigest()[:16]

@@ -13,6 +13,8 @@ from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from core.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,10 +106,22 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Ingestion pipeline initialized.")
 
-        # Initialize inference engine
+        # Initialize inference engine with auto-detection
+        from core.inference.backends import auto_select_backend
         from core.inference.engine import ContextEngine
         from core.inference.prompt_builder import PromptBuilder
         from core.inference.retriever import HybridRetriever
+
+        backend_setting = settings.INFERENCE_BACKEND
+        prefer_ollama = backend_setting == "ollama"
+
+        backend = auto_select_backend(
+            prefer_ollama=prefer_ollama,
+            ollama_host=settings.OLLAMA_HOST,
+            ollama_model=settings.OLLAMA_MODEL,
+            ollama_fallback=settings.OLLAMA_FALLBACK_MODEL,
+        )
+        logger.info("Selected inference backend: %s (%s)", backend.name(), backend_setting)
 
         retriever = HybridRetriever(
             graph_store=_context.graph_store,
@@ -117,13 +131,13 @@ async def lifespan(app: FastAPI):
         _context.engine = ContextEngine(
             retriever=retriever,
             prompt_builder=prompt_builder,
+            backend=backend,
         )
 
-        # Check Ollama status
         if _context.engine.is_ready():
-            logger.info("Ollama is running and models are available.")
+            logger.info("Inference backend is ready: %s", backend.name())
         else:
-            logger.warning("Ollama is not available. Queries will fail until Ollama is started.")
+            logger.warning("Inference backend is not available. Queries will fail.")
 
         logger.info("ContextOS startup complete.")
 

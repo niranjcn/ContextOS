@@ -44,7 +44,12 @@ class Settings:
         # ---- Encryption ----
         self.CONTEXTOS_ENCRYPTION_KEY: Optional[str] = os.getenv("CONTEXTOS_ENCRYPTION_KEY")
 
-        # ---- LLM Settings ----
+        # ---- Inference Backend ----
+        # auto | ollama | external
+        self.INFERENCE_BACKEND: str = os.getenv("INFERENCE_BACKEND", "auto")
+        self.INFERENCE_TIMEOUT: int = int(os.getenv("INFERENCE_TIMEOUT", "180"))
+
+        # ---- LLM Settings (Ollama) ----
         self.OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
         self.OLLAMA_FALLBACK_MODEL: str = os.getenv("OLLAMA_FALLBACK_MODEL", "mistral")

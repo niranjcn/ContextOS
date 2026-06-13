@@ -7,7 +7,6 @@ by analyzing their writing style from previously ingested documents.
 
 import logging
 
-from core.config import settings
 from core.inference.engine import ContextEngine, EngineResponse
 from core.inference.prompt_builder import PromptBuilder
 from core.inference.retriever import HybridRetriever
@@ -56,11 +55,11 @@ class SmartDraft:
         )
 
         try:
-            answer = self._engine.generate(prompt, settings.OLLAMA_MODEL)
+            answer = self._engine.generate(prompt)
             return EngineResponse(
                 answer=answer,
                 sources=[],
-                model_used=settings.OLLAMA_MODEL,
+                model_used=self._engine._backend.name(),
             )
         except Exception as exc:
             logger.error("Draft generation failed: %s", exc)
@@ -87,11 +86,11 @@ class SmartDraft:
         )
 
         try:
-            answer = self._engine.generate(prompt, settings.OLLAMA_MODEL)
+            answer = self._engine.generate(prompt)
             return EngineResponse(
                 answer=answer,
                 sources=[c.metadata.get("source", "") for c in context_result.semantic_chunks],
-                model_used=settings.OLLAMA_MODEL,
+                model_used=self._engine._backend.name(),
             )
         except Exception as exc:
             logger.error("Content draft failed: %s", exc)

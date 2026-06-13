@@ -7,7 +7,6 @@ topics, and past interactions from the knowledge graph.
 
 import logging
 
-from core.config import settings
 from core.inference.engine import ContextEngine, EngineResponse
 from core.inference.prompt_builder import PromptBuilder
 from core.inference.retriever import HybridRetriever
@@ -79,11 +78,11 @@ class MeetingBrief:
         prompt = self._prompt_builder.build_brief_prompt(meeting_info, history)
 
         try:
-            answer = self._engine.generate(prompt, settings.OLLAMA_MODEL)
+            answer = self._engine.generate(prompt)
             return EngineResponse(
                 answer=answer,
                 sources=[],
-                model_used=settings.OLLAMA_MODEL,
+                model_used=self._engine._backend.name(),
             )
         except Exception as exc:
             logger.error("Brief generation failed: %s", exc)

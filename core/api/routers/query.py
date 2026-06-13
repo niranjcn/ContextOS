@@ -83,7 +83,7 @@ async def query(request: QueryRequest) -> QueryResponse:
     if not engine.is_ready():
         raise HTTPException(
             status_code=503,
-            detail="Ollama is not running or no models are available.",
+            detail="Inference backend is not available.",
         )
 
     logger.info("Processing query: %s...", request.question[:50])
@@ -130,7 +130,7 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
     if not engine.is_ready():
         raise HTTPException(
             status_code=503,
-            detail="Ollama is not running or no models are available.",
+            detail="Inference backend is not available.",
         )
 
     logger.info("Processing streaming query: %s...", request.question[:50])
