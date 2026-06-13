@@ -23,16 +23,23 @@ COPY requirements.txt /tmp/requirements.txt
 
 # Install Python dependencies.
 # --no-cache-dir avoids storing pip's download cache (saves ~100MB).
-# openai-whisper is installed separately WITH --no-build-isolation because its
-# setup.py relies on pkg_resources / setuptools.config.setupcfg which are not
-# available in pip's modern PEP 517 isolated build environment.
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+#
+# Order matters for size and reliability:
+#   1. CPU-only PyTorch first — avoids pulling in ~2GB of CUDA packages
+#      that sentence-transformers would otherwise install from the default index.
+#   2. Everything from requirements.txt (torch is already installed, so pip
+#      skips the CUDA variant).
+#   3. openai-whisper WITH --no-build-isolation because its setup.py relies on
+#      pkg_resources which is missing in pip's modern PEP 517 isolated build env.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     pip install --no-cache-dir --no-build-isolation openai-whisper==20240930
 
-# Download the spaCy English NLP model at build time so the container
-# starts instantly without needing internet access at runtime.
-RUN python -m spacy download en_core_web_sm
+# Download the spaCy English NLP model at build time via pip URL
+# (python -m spacy download fails on yanked/old versions).
+RUN pip install --no-cache-dir \
+    https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 
 # Copy the entire project source code into the container.
 WORKDIR /app

@@ -46,8 +46,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install CPU-only torch first to avoid pulling in 2 GB of CUDA packages
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements-dev.txt
-          python -m spacy download en_core_web_sm
+          # Install spaCy model via pip URL instead of `spacy download`
+          pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 
       - name: Run tests with coverage
         run: |
