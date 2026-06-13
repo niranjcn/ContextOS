@@ -4,12 +4,14 @@ import QueryBox from './components/QueryBox'
 import GraphViewer from './components/GraphViewer'
 import IngestStatus from './components/IngestStatus'
 import StatusPanel from './components/StatusPanel'
+import Connectors from './components/Connectors'
 
 const TABS = [
-  { id: 'ask',   label: 'Ask',             icon: '🔍' },
-  { id: 'graph', label: 'Knowledge Graph', icon: '🕸️' },
-  { id: 'ingest',label: 'Ingest',          icon: '📥' },
-  { id: 'status',label: 'Status',          icon: '📊' },
+  { id: 'ask',       label: 'Query',      icon: '❯' },
+  { id: 'graph',     label: 'Graph',      icon: '🕸️' },
+  { id: 'ingest',    label: 'Ingest',      icon: '📥' },
+  { id: 'connectors',label: 'Connectors',  icon: '🔌' },
+  { id: 'status',    label: 'Status',      icon: '📊' },
 ]
 
 export default function App() {
@@ -98,10 +100,11 @@ export default function App() {
 
       {/* ---- Tab Content ---- */}
       <main className="tab-content">
-        {activeTab === 'ask'    && <QueryBox />}
-        {activeTab === 'graph'  && <GraphViewer />}
-        {activeTab === 'ingest' && <IngestStatus />}
-        {activeTab === 'status' && <StatusPanel />}
+        {activeTab === 'ask'        && <QueryBox />}
+        {activeTab === 'graph'      && <GraphViewer />}
+        {activeTab === 'ingest'     && <IngestStatus />}
+        {activeTab === 'connectors' && <Connectors />}
+        {activeTab === 'status'     && <StatusPanel />}
       </main>
     </div>
   )

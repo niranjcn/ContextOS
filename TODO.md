@@ -20,7 +20,29 @@ Everything that's not yet implemented or needs polish.
 
 ---
 
-## In Progress
+## Recently Completed
+
+### Dashboard: Connector Setup + Terminal Query
+- **Connector configuration UI** — New "Connectors" tab in the dashboard with:
+  - Card-based layout showing each connector (Gmail, Drive, Browser History, Local Files)
+  - Guided step-by-step setup modal with external links to Google Cloud Console
+  - Inline credential file upload (drag/click to upload `credentials.json`)
+  - Toggle switch to enable/disable connectors
+  - Expand/collapse sections for credentials, path config, and sync controls
+  - Sync Now button with progress indicator
+- **Terminal-style Query interface** — Upgraded "Query" tab to a terminal emulator with:
+  - Monospace prompt with `❯` prefix
+  - Streaming responses (uses `POST /query/stream` with SSE)
+  - Sub-tabs for Query, Draft, and Meeting Brief modes
+  - Conversation history with blinking cursor during streaming
+  - Example hints in the welcome screen
+  - Session clear button
+  - Supports all three query modes from a single terminal interface
+- **Backend: Connectors API** — New `GET/POST /connectors/*` endpoints with:
+  - JSON config store (`connectors_config.json` in data directory)
+  - Credential file management (save OAuth JSON to `secrets/`)
+  - Sync triggers that call the actual connector code
+  - Per-connector setup guides with numbered steps and external links
 
 ### Browser Extension
 - **Status**: Scaffolded (Manifest V3, content/background/popup, icons)
@@ -28,31 +50,35 @@ Everything that's not yet implemented or needs polish.
 - **What's done**: `manifest.json`, `content.js`, `background.js`, `popup.html`, `popup.js`, placeholder icons
 - **What's missing**:
   - Error retry/queue mechanism for failed sends
-  - Smart content extraction (readability fork for article-only capture, not full body text)
+  - Smart content extraction (readability fork for article-only capture)
   - Configurable capture shortcuts
-  - Icon badge showing number of pending (unsent) captures
-  - Site blacklist (e.g. exclude mail.google.com)
-  - Tab-specific capture toggle
-  - Firefox port (Manifest V3 compatible)
+  - Site blacklist
+  - Firefox port
 
 ---
 
 ## Needs Polish
 
-### Connectors
+### Connectors (backend)
 
 | Connector | Current State | What's Missing |
 |-----------|--------------|----------------|
-| **Gmail** | OAuth works, one-shot fetch works | No auto-scheduled background sync; no error recovery for API quotas; no incremental sync (always fetches all) |
+| **Gmail** | OAuth works, one-shot fetch works, dashboard config UI ready | No auto-scheduled background sync; no error recovery for API quotas; no incremental sync (always fetches all) |
 | **Google Drive** | Lists files, downloads content | No pagination beyond first page; no folder traversal; no MIME-type filtering; no incremental sync (~60% complete) |
-| **Browser History** | Chrome & Firefox parsing works | No Safari support; no polling/daemon mode; no recency filtering beyond SQL LIMIT |
-| **Local Files** | Polling works, multi-format support | Not auto-registered in the sync system; must be explicitly called |
+| **Browser History** | Chrome & Firefox parsing works, dashboard config UI ready | No Safari support; no polling/daemon mode; no recency filtering beyond SQL LIMIT |
+| **Local Files** | Polling works, multi-format support, dashboard config UI ready | Not auto-registered in the sync system; must be explicitly called |
 
 #### Fix needed in `connectors/gdrive.py`:
 - Implement pagination (currently fetches first page only)
 - Add recursive folder traversal
 - Add incremental sync (track last sync time, only fetch newer files)
 - Broaden MIME-type export handling
+
+#### Connector config now managed via Dashboard UI:
+- `core/api/routers/connectors.py` — REST API for config CRUD
+- `core/config_store.py` — JSON file store in data directory
+- `dashboard/src/components/Connectors.jsx` — Full UI with guides, credential upload, toggles, sync
+- Future: migrate connector backend code to read from `config_store` instead of only `.env`
 
 ### Features
 
@@ -73,9 +99,10 @@ Everything that's not yet implemented or needs polish.
 
 | Component | Current State | What's Missing |
 |-----------|--------------|----------------|
-| **QueryBox** | Single query works | No streaming response (uses `POST /query`, not `POST /query/stream`); no conversation history |
+| **QueryBox** | Terminal-style interface with streaming, history, draft/brief modes | No conversation persistence across page reload; no export/copy buttons |
 | **GraphViewer** | People list with click-to-docs works | No organization browsing tab; no network visualization (currently just lists); no search/filter |
 | **IngestStatus** | File upload, text paste, stats display works | No delete/re-ingest controls; no progress indicator for long ingests |
+| **Connectors** | Full setup UI with guides, credential upload, toggles, sync | No real-time sync progress polling; no credential validation test |
 | **StatusPanel** | Health cards, auto-refresh works | No model management (pull new models from UI) |
 
 ### Tests

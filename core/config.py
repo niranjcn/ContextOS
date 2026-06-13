@@ -37,20 +37,12 @@ class Settings:
     def __init__(self) -> None:
         """Initialize settings from environment variables."""
         # ---- Paths ----
-        self.CONTEXTOS_DATA_DIR: Path = self._resolve_path(
-            os.getenv("CONTEXTOS_DATA_DIR", "~/.contextos/data")
-        )
-        self.CONTEXTOS_DB_DIR: Path = self._resolve_path(
-            os.getenv("CONTEXTOS_DB_DIR", "~/.contextos/db")
-        )
-        self.CONTEXTOS_LOG_DIR: Path = self._resolve_path(
-            os.getenv("CONTEXTOS_LOG_DIR", "~/.contextos/logs")
-        )
+        self.CONTEXTOS_DATA_DIR: Path = self._resolve_path(os.getenv("CONTEXTOS_DATA_DIR", "~/.contextos/data"))
+        self.CONTEXTOS_DB_DIR: Path = self._resolve_path(os.getenv("CONTEXTOS_DB_DIR", "~/.contextos/db"))
+        self.CONTEXTOS_LOG_DIR: Path = self._resolve_path(os.getenv("CONTEXTOS_LOG_DIR", "~/.contextos/logs"))
 
         # ---- Encryption ----
-        self.CONTEXTOS_ENCRYPTION_KEY: Optional[str] = os.getenv(
-            "CONTEXTOS_ENCRYPTION_KEY"
-        )
+        self.CONTEXTOS_ENCRYPTION_KEY: Optional[str] = os.getenv("CONTEXTOS_ENCRYPTION_KEY")
 
         # ---- LLM Settings ----
         self.OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -60,9 +52,7 @@ class Settings:
         try:
             self.OLLAMA_TIMEOUT: int = int(raw_timeout)
         except ValueError:
-            logger.warning(
-                "Invalid OLLAMA_TIMEOUT value '%s', falling back to 120.", raw_timeout
-            )
+            logger.warning("Invalid OLLAMA_TIMEOUT value '%s', falling back to 120.", raw_timeout)
             self.OLLAMA_TIMEOUT = 120
 
         # ---- Embedding Settings ----
@@ -80,26 +70,14 @@ class Settings:
                 "~/.contextos/google_credentials.json",
             )
         )
-        self.GOOGLE_TOKEN_FILE: Path = self._resolve_path(
-            os.getenv("GOOGLE_TOKEN_FILE", "~/.contextos/google_token.json")
-        )
+        self.GOOGLE_TOKEN_FILE: Path = self._resolve_path(os.getenv("GOOGLE_TOKEN_FILE", "~/.contextos/google_token.json"))
 
         # ---- Feature Flags ----
-        self.ENABLE_GMAIL: bool = (
-            os.getenv("ENABLE_GMAIL", "false").lower() == "true"
-        )
-        self.ENABLE_GDRIVE: bool = (
-            os.getenv("ENABLE_GDRIVE", "false").lower() == "true"
-        )
-        self.ENABLE_BROWSER_HISTORY: bool = (
-            os.getenv("ENABLE_BROWSER_HISTORY", "false").lower() == "true"
-        )
-        self.ENABLE_WHISPER: bool = (
-            os.getenv("ENABLE_WHISPER", "false").lower() == "true"
-        )
-        self.ENABLE_ENCRYPTION: bool = (
-            os.getenv("ENABLE_ENCRYPTION", "true").lower() == "true"
-        )
+        self.ENABLE_GMAIL: bool = os.getenv("ENABLE_GMAIL", "false").lower() == "true"
+        self.ENABLE_GDRIVE: bool = os.getenv("ENABLE_GDRIVE", "false").lower() == "true"
+        self.ENABLE_BROWSER_HISTORY: bool = os.getenv("ENABLE_BROWSER_HISTORY", "false").lower() == "true"
+        self.ENABLE_WHISPER: bool = os.getenv("ENABLE_WHISPER", "false").lower() == "true"
+        self.ENABLE_ENCRYPTION: bool = os.getenv("ENABLE_ENCRYPTION", "true").lower() == "true"
 
         # Validate critical settings
         self._validate()
@@ -136,8 +114,7 @@ class Settings:
                 )
             if self.CONTEXTOS_ENCRYPTION_KEY == "your-generated-key-here":
                 raise ConfigurationError(
-                    "CONTEXTOS_ENCRYPTION_KEY is still set to the placeholder value. "
-                    "Please generate a real key."
+                    "CONTEXTOS_ENCRYPTION_KEY is still set to the placeholder value. " "Please generate a real key."
                 )
 
     def get_db_path(self, name: str) -> Path:
@@ -204,8 +181,7 @@ def _create_settings() -> Settings:
         msg = str(exc)
         if "encryption" in msg.lower() or "CONTEXTOS_ENCRYPTION_KEY" in msg:
             logger.warning(
-                "Encryption key issue: %s. "
-                "Falling back to encryption disabled.",
+                "Encryption key issue: %s. " "Falling back to encryption disabled.",
                 exc,
             )
             os.environ["ENABLE_ENCRYPTION"] = "false"

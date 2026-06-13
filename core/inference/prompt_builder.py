@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 # ---- Prompt Templates ---- #
 
-QUERY_PROMPT_TEMPLATE = """You are ContextOS, a private AI assistant with access to the user's professional knowledge base. Answer questions using ONLY the context provided below. If the context doesn't contain enough information, say so honestly.
+QUERY_PROMPT_TEMPLATE = """You are ContextOS, a private AI assistant with access to the user's professional knowledge base.
+Answer questions using ONLY the context provided below. If the context doesn't contain enough information, say so honestly.
 
 ## Your professional context
 {graph_facts}
@@ -34,7 +35,8 @@ QUERY_PROMPT_TEMPLATE = """You are ContextOS, a private AI assistant with access
 {question}
 """
 
-DRAFT_PROMPT_TEMPLATE = """You are helping draft content in the user's professional voice. Use the provided context and style examples to match their tone and communication patterns.
+DRAFT_PROMPT_TEMPLATE = """You are helping draft content in the user's professional voice.
+Use the provided context and style examples to match their tone and communication patterns.
 
 ## Context
 {context}
@@ -48,7 +50,8 @@ DRAFT_PROMPT_TEMPLATE = """You are helping draft content in the user's professio
 Write the draft now, matching the user's voice and style:
 """
 
-MEETING_BRIEF_TEMPLATE = """You are preparing a pre-meeting briefing for the user. Summarize all relevant context about the meeting participants and topics.
+MEETING_BRIEF_TEMPLATE = """You are preparing a pre-meeting briefing for the user.
+Summarize all relevant context about the meeting participants and topics.
 
 ## Meeting Information
 - Title: {meeting_title}
@@ -96,9 +99,7 @@ class PromptBuilder:
         """
         # Format graph facts
         if retrieval.graph_facts:
-            graph_facts = "\n".join(
-                f"- {fact}" for fact in retrieval.graph_facts
-            )
+            graph_facts = "\n".join(f"- {fact}" for fact in retrieval.graph_facts)
         else:
             graph_facts = "No specific relationship data available."
 
@@ -113,9 +114,7 @@ class PromptBuilder:
                     citation += f", Doc: {doc_id}"
                 citation += "]"
 
-                chunk_sections.append(
-                    f"### Document {i} {citation}\n{chunk.content}"
-                )
+                chunk_sections.append(f"### Document {i} {citation}\n{chunk.content}")
             semantic_chunks = "\n\n".join(chunk_sections)
         else:
             semantic_chunks = "No relevant documents found."
@@ -134,9 +133,7 @@ class PromptBuilder:
         )
         return prompt
 
-    def build_draft_prompt(
-        self, instruction: str, context: str, style_examples: str
-    ) -> str:
+    def build_draft_prompt(self, instruction: str, context: str, style_examples: str) -> str:
         """
         Build a prompt for smart draft generation.
 
@@ -156,9 +153,7 @@ class PromptBuilder:
         logger.debug("Built draft prompt (%d chars).", len(prompt))
         return prompt
 
-    def build_brief_prompt(
-        self, meeting_info: dict[str, Any], history: str
-    ) -> str:
+    def build_brief_prompt(self, meeting_info: dict[str, Any], history: str) -> str:
         """
         Build a prompt for pre-meeting briefing generation.
 

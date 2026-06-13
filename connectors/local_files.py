@@ -57,9 +57,7 @@ class LocalFileConnector(BaseConnector):
             True if the directory exists and is accessible.
         """
         if not self._watch_dir.exists():
-            self._logger.warning(
-                "Watch directory does not exist: %s. Creating it.", self._watch_dir
-            )
+            self._logger.warning("Watch directory does not exist: %s. Creating it.", self._watch_dir)
             try:
                 self._watch_dir.mkdir(parents=True, exist_ok=True)
                 return True
@@ -113,9 +111,7 @@ class LocalFileConnector(BaseConnector):
             except Exception as exc:
                 self._logger.error("Error reading file %s: %s", file_path, exc)
 
-        self._logger.info(
-            "Found %d supported files in %s.", len(documents), self._watch_dir
-        )
+        self._logger.info("Found %d supported files in %s.", len(documents), self._watch_dir)
         return documents
 
     def _read_file(self, file_path: Path) -> Optional[dict[str, Any]]:
@@ -149,9 +145,7 @@ class LocalFileConnector(BaseConnector):
                 pages = loader.load()
                 content = "\n\n".join(page.page_content for page in pages)
             except ImportError:
-                self._logger.warning(
-                    "PyPDFLoader not available. Install langchain-community for PDF support."
-                )
+                self._logger.warning("PyPDFLoader not available. Install langchain-community for PDF support.")
                 return None
             except Exception as exc:
                 self._logger.error("Cannot read PDF %s: %s", file_path, exc)
@@ -165,9 +159,7 @@ class LocalFileConnector(BaseConnector):
                 docs = loader.load()
                 content = "\n\n".join(doc.page_content for doc in docs)
             except ImportError:
-                self._logger.warning(
-                    "Docx2txtLoader not available. Install langchain-community for DOCX support."
-                )
+                self._logger.warning("Docx2txtLoader not available. Install langchain-community for DOCX support.")
                 return None
             except Exception as exc:
                 self._logger.error("Cannot read DOCX %s: %s", file_path, exc)
@@ -213,22 +205,16 @@ class LocalFileConnector(BaseConnector):
             pipeline: IngestionPipeline instance for processing.
         """
         if metadata_store is None or pipeline is None:
-            self._logger.error(
-                "Both metadata_store and pipeline are required for daemon mode."
-            )
+            self._logger.error("Both metadata_store and pipeline are required for daemon mode.")
             return
 
-        self._logger.info(
-            "Starting local file watcher (poll every %ds)...", self._poll_interval
-        )
+        self._logger.info("Starting local file watcher (poll every %ds)...", self._poll_interval)
 
         try:
             while True:
                 stats = self.sync(metadata_store=metadata_store, pipeline=pipeline)
                 if stats["new"] > 0:
-                    self._logger.info(
-                        "Sync cycle: %d new files ingested.", stats["new"]
-                    )
+                    self._logger.info("Sync cycle: %d new files ingested.", stats["new"])
                 else:
                     self._logger.debug("Sync cycle: no new files.")
                 time.sleep(self._poll_interval)

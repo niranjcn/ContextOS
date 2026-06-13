@@ -1,7 +1,8 @@
 """Tests for core.inference.retriever module."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from core.storage.vectors import SearchResult
 
@@ -13,9 +14,7 @@ def mock_graph_store():
     store.get_documents_for_person.return_value = [
         {"doc_id": "doc1", "title": "Meeting Notes", "source": "test", "date": "2024-01-15"}
     ]
-    store.search_entities.return_value = [
-        {"name": "Google", "type": "Organization"}
-    ]
+    store.search_entities.return_value = [{"name": "Google", "type": "Organization"}]
     store.get_all_people.return_value = ["John Doe"]
     return store
 
@@ -44,13 +43,10 @@ class TestHybridRetriever:
         # Use a mock extractor to avoid spaCy dependency
         mock_extractor = MagicMock()
         from core.ingestion.extractor import ExtractedEntities
-        mock_extractor.extract.return_value = ExtractedEntities(
-            people=["John"], organizations=["Google"]
-        )
 
-        retriever = HybridRetriever(
-            mock_graph_store, mock_vector_store, extractor=mock_extractor
-        )
+        mock_extractor.extract.return_value = ExtractedEntities(people=["John"], organizations=["Google"])
+
+        retriever = HybridRetriever(mock_graph_store, mock_vector_store, extractor=mock_extractor)
         result = retriever.retrieve("What did John discuss?")
 
         assert isinstance(result, RetrievalResult)
@@ -62,11 +58,10 @@ class TestHybridRetriever:
 
         mock_extractor = MagicMock()
         from core.ingestion.extractor import ExtractedEntities
+
         mock_extractor.extract.return_value = ExtractedEntities(people=["John"])
 
-        retriever = HybridRetriever(
-            mock_graph_store, mock_vector_store, extractor=mock_extractor
-        )
+        retriever = HybridRetriever(mock_graph_store, mock_vector_store, extractor=mock_extractor)
         retriever.retrieve("Tell me about John")
 
         mock_graph_store.get_documents_for_person.assert_called()
@@ -95,6 +90,7 @@ class TestHybridRetriever:
 
         mock_extractor = MagicMock()
         from core.ingestion.extractor import ExtractedEntities
+
         mock_extractor.extract.return_value = ExtractedEntities()
 
         retriever = HybridRetriever(empty_graph, empty_vector, extractor=mock_extractor)

@@ -24,8 +24,7 @@ _START_TIME = time.time()
     "",
     response_model=HealthResponse,
     summary="System health check",
-    description="Returns overall system health including Ollama status, "
-    "vector store count, and graph node count.",
+    description="Returns overall system health including Ollama status, " "vector store count, and graph node count.",
 )
 async def health_check() -> HealthResponse:
     """
@@ -60,9 +59,7 @@ async def health_check() -> HealthResponse:
     if graph_store:
         try:
             stats = graph_store.get_stats()
-            graph_node_count = sum(
-                v for k, v in stats.items() if k.endswith("_count") and "REL" not in k
-            )
+            graph_node_count = sum(v for k, v in stats.items() if k.endswith("_count") and "REL" not in k)
         except Exception as exc:
             logger.warning("Could not get graph stats: %s", exc)
 

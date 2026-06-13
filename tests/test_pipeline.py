@@ -1,8 +1,6 @@
 """Tests for core.ingestion.pipeline module."""
 
-import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -93,8 +91,7 @@ class TestIngestFile:
         """ingest_file should process a .txt file successfully."""
         txt_file = tmp_path / "sample.txt"
         txt_file.write_text(
-            "Meeting notes from Q4 planning session with Alice and Bob. "
-            "They decided to launch the new product in March.",
+            "Meeting notes from Q4 planning session with Alice and Bob. " "They decided to launch the new product in March.",
             encoding="utf-8",
         )
 

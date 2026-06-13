@@ -8,7 +8,7 @@ then feeds the transcript into the ingestion pipeline.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ DEFAULT_MODEL_SIZE = "base"
 @dataclass
 class TranscriptionSegment:
     """A timed segment from the transcription."""
+
     start: float
     end: float
     text: str
@@ -27,6 +28,7 @@ class TranscriptionSegment:
 @dataclass
 class TranscriptionResult:
     """Result of audio transcription."""
+
     text: str = ""
     segments: list[TranscriptionSegment] = field(default_factory=list)
     language: str = ""
@@ -59,9 +61,7 @@ class MeetingTranscriber:
                 self._model = whisper.load_model(self._model_size)
             logger.info("Whisper %s model loaded.", self._model_size)
         except ImportError:
-            logger.error(
-                "openai-whisper not installed. Install with: pip install openai-whisper"
-            )
+            logger.error("openai-whisper not installed. Install with: pip install openai-whisper")
             raise
 
     def transcribe(self, audio_path: Path) -> TranscriptionResult:
@@ -82,10 +82,7 @@ class MeetingTranscriber:
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         if audio_path.suffix.lower() not in SUPPORTED_FORMATS:
-            raise ValueError(
-                f"Unsupported format '{audio_path.suffix}'. "
-                f"Supported: {', '.join(sorted(SUPPORTED_FORMATS))}"
-            )
+            raise ValueError(f"Unsupported format '{audio_path.suffix}'. " f"Supported: {', '.join(sorted(SUPPORTED_FORMATS))}")
 
         self._ensure_model()
 
@@ -133,9 +130,7 @@ class MeetingTranscriber:
             logger.error("Transcription failed for %s: %s", audio_path, exc)
             raise
 
-    def transcribe_and_ingest(
-        self, audio_path: Path, pipeline: Any
-    ) -> dict[str, Any]:
+    def transcribe_and_ingest(self, audio_path: Path, pipeline: Any) -> dict[str, Any]:
         """
         Transcribe audio and immediately ingest the transcript.
 
@@ -153,6 +148,7 @@ class MeetingTranscriber:
             return {"transcription": transcription, "ingestion": None}
 
         import hashlib
+
         content_hash = hashlib.sha256(transcription.text.encode()).hexdigest()[:16]
 
         result = pipeline.process_text(

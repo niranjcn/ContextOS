@@ -6,7 +6,6 @@ by analyzing their writing style from previously ingested documents.
 """
 
 import logging
-from typing import Any
 
 from core.config import settings
 from core.inference.engine import ContextEngine, EngineResponse
@@ -31,9 +30,7 @@ class SmartDraft:
         self._prompt_builder = PromptBuilder()
         logger.info("SmartDraft initialized.")
 
-    def draft_reply(
-        self, original_message: str, instruction: str = "Write a professional reply"
-    ) -> EngineResponse:
+    def draft_reply(self, original_message: str, instruction: str = "Write a professional reply") -> EngineResponse:
         """
         Draft a reply to a message in the user's voice.
 
@@ -45,18 +42,12 @@ class SmartDraft:
             EngineResponse with the drafted reply.
         """
         # Retrieve style examples
-        style_result = self._retriever.retrieve(
-            "examples of my writing style emails", k=3
-        )
-        style_text = "\n---\n".join(
-            c.content for c in style_result.semantic_chunks
-        ) or "No style examples available."
+        style_result = self._retriever.retrieve("examples of my writing style emails", k=3)
+        style_text = "\n---\n".join(c.content for c in style_result.semantic_chunks) or "No style examples available."
 
         # Retrieve context about the topic
         context_result = self._retriever.retrieve(original_message, k=3)
-        context_text = "\n---\n".join(
-            c.content for c in context_result.semantic_chunks
-        ) or original_message
+        context_text = "\n---\n".join(c.content for c in context_result.semantic_chunks) or original_message
 
         prompt = self._prompt_builder.build_draft_prompt(
             instruction=f"{instruction}\n\nOriginal message:\n{original_message}",
@@ -75,9 +66,7 @@ class SmartDraft:
             logger.error("Draft generation failed: %s", exc)
             return EngineResponse(answer=f"Draft generation failed: {exc}")
 
-    def draft_content(
-        self, topic: str, content_type: str = "email"
-    ) -> EngineResponse:
+    def draft_content(self, topic: str, content_type: str = "email") -> EngineResponse:
         """
         Draft new content about a topic.
 
@@ -89,9 +78,7 @@ class SmartDraft:
             EngineResponse with the drafted content.
         """
         context_result = self._retriever.retrieve(topic, k=5)
-        context_text = "\n---\n".join(
-            c.content for c in context_result.semantic_chunks
-        ) or "No additional context."
+        context_text = "\n---\n".join(c.content for c in context_result.semantic_chunks) or "No additional context."
 
         prompt = self._prompt_builder.build_draft_prompt(
             instruction=f"Write a {content_type} about: {topic}",

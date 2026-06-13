@@ -8,7 +8,6 @@ system health checks, and starting the API server.
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -30,7 +29,6 @@ def query(
     question: str = typer.Argument(..., help="The question to ask ContextOS."),
 ) -> None:
     """Query the ContextOS engine with a natural language question."""
-    from core.config import settings
     from core.inference.engine import ContextEngine
     from core.inference.prompt_builder import PromptBuilder
     from core.inference.retriever import HybridRetriever
@@ -45,9 +43,7 @@ def query(
         engine = ContextEngine(retriever, prompt_builder)
 
     if not engine.is_ready():
-        console.print(
-            "[bold red]Error:[/] Ollama is not running. Start it with: ollama serve"
-        )
+        console.print("[bold red]Error:[/] Ollama is not running. Start it with: ollama serve")
         raise typer.Exit(1)
 
     with console.status("[bold green]Thinking..."):
@@ -70,11 +66,11 @@ def ingest(
     path: str = typer.Argument(..., help="Path to a file or folder to ingest."),
 ) -> None:
     """Ingest files from a path into the knowledge base."""
+    from connectors.local_files import LocalFileConnector
     from core.ingestion.pipeline import IngestionPipeline
     from core.storage.graph import GraphStore
     from core.storage.metadata import MetadataStore
     from core.storage.vectors import VectorStore
-    from connectors.local_files import LocalFileConnector
 
     target = Path(path).resolve()
     if not target.exists():
@@ -104,8 +100,7 @@ def ingest(
             result = pipeline.ingest_file(str(target))
         console.print(
             Panel(
-                f"Status: {result['status']}\n"
-                f"Chunks: {result['chunks_created']}",
+                f"Status: {result['status']}\n" f"Chunks: {result['chunks_created']}",
                 title=f"Ingested: {target.name}",
                 border_style="green",
             )
@@ -229,9 +224,7 @@ def brief(
 
 @app.command()
 def decisions(
-    search_query: str = typer.Argument(
-        "", help="Search query for decisions. Leave empty for recent."
-    ),
+    search_query: str = typer.Argument("", help="Search query for decisions. Leave empty for recent."),
     person: str = typer.Option("", help="Filter decisions by person name."),
     limit: int = typer.Option(10, help="Maximum results to return."),
 ) -> None:
@@ -342,11 +335,10 @@ def graph_stats() -> None:
 
 # ---- Connector commands ----
 
+
 @app.command()
 def connect(
-    connector_name: str = typer.Argument(
-        ..., help="Connector to configure: gmail, gdrive"
-    ),
+    connector_name: str = typer.Argument(..., help="Connector to configure: gmail, gdrive"),
 ) -> None:
     """Authenticate and configure a data connector (gmail, gdrive)."""
     if connector_name == "gmail":
@@ -354,10 +346,7 @@ def connect(
 
         c = GmailConnector()
         if not c.validate_config():
-            console.print(
-                "[bold red]Error:[/] Gmail not configured. "
-                "Place client_secrets.json in your data directory."
-            )
+            console.print("[bold red]Error:[/] Gmail not configured. " "Place client_secrets.json in your data directory.")
             raise typer.Exit(1)
 
         console.print("[bold green]Opening browser for Gmail OAuth...[/]")
@@ -369,10 +358,7 @@ def connect(
 
         c = GDriveConnector()
         if not c.validate_config():
-            console.print(
-                "[bold red]Error:[/] Google Drive not configured. "
-                "Place client_secrets.json in your data directory."
-            )
+            console.print("[bold red]Error:[/] Google Drive not configured. " "Place client_secrets.json in your data directory.")
             raise typer.Exit(1)
 
         console.print("[bold green]Opening browser for GDrive OAuth...[/]")
@@ -380,18 +366,15 @@ def connect(
         console.print(f"[green]✓ GDrive connected. Found {len(docs)} files.[/]")
 
     else:
-        console.print(
-            f"[bold red]Error:[/] Unknown connector '{connector_name}'. "
-            "Available: gmail, gdrive"
-        )
+        console.print(f"[bold red]Error:[/] Unknown connector '{connector_name}'. " "Available: gmail, gdrive")
         raise typer.Exit(1)
 
 
 @app.command()
 def sync(
     source: str = typer.Option(
-        "", help="Specific source to sync (gmail, gdrive, local_files, browser_history). "
-        "Leave empty for all enabled."
+        "",
+        help="Specific source to sync (gmail, gdrive, local_files, browser_history). " "Leave empty for all enabled.",
     ),
 ) -> None:
     """Run connector sync to ingest new data from configured sources."""
@@ -410,6 +393,7 @@ def sync(
 
     if not source or source == "local_files":
         from connectors.local_files import LocalFileConnector
+
         c = LocalFileConnector()
         if c.validate_config():
             connectors_to_run.append(c)
@@ -417,6 +401,7 @@ def sync(
     if not source or source == "gmail":
         try:
             from connectors.gmail import GmailConnector
+
             c = GmailConnector()
             if c.validate_config():
                 connectors_to_run.append(c)
@@ -426,6 +411,7 @@ def sync(
     if not source or source == "gdrive":
         try:
             from connectors.gdrive import GDriveConnector
+
             c = GDriveConnector()
             if c.validate_config():
                 connectors_to_run.append(c)
@@ -434,6 +420,7 @@ def sync(
 
     if not source or source == "browser_history":
         from connectors.browser_history import BrowserHistoryConnector
+
         c = BrowserHistoryConnector()
         if c.validate_config():
             connectors_to_run.append(c)
@@ -477,12 +464,13 @@ def status() -> None:
     # Ollama check
     try:
         import ollama as ollama_lib
+
         client = ollama_lib.Client(host=settings.OLLAMA_HOST)
         models = client.list()
         model_names = [m.get("name", m.get("model", "")) for m in models.get("models", [])]
         table.add_row("Ollama", f"✓ Running ({len(model_names)} models)")
         for name in model_names[:5]:
-            table.add_row(f"  Model", name)
+            table.add_row("  Model", name)
     except Exception:
         table.add_row("Ollama", "[red]✗ Not running[/]")
 
@@ -520,9 +508,7 @@ def serve(
 
     console.print(
         Panel(
-            f"Starting ContextOS API server\n"
-            f"URL: http://{host}:{port}\n"
-            f"Docs: http://{host}:{port}/docs",
+            f"Starting ContextOS API server\n" f"URL: http://{host}:{port}\n" f"Docs: http://{host}:{port}/docs",
             title="ContextOS Server",
             border_style="green",
         )

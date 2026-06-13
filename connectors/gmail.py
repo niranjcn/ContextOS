@@ -80,17 +80,13 @@ class GmailConnector(BaseConnector):
             token_file = settings.GOOGLE_TOKEN_FILE
 
             if token_file.exists():
-                creds = Credentials.from_authorized_user_file(
-                    str(token_file), GMAIL_SCOPES
-                )
+                creds = Credentials.from_authorized_user_file(str(token_file), GMAIL_SCOPES)
 
             if not creds or not creds.valid:
                 if creds and creds.expired and creds.refresh_token:
                     creds.refresh(Request())
                 else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        str(settings.GOOGLE_CLIENT_SECRETS_FILE), GMAIL_SCOPES
-                    )
+                    flow = InstalledAppFlow.from_client_secrets_file(str(settings.GOOGLE_CLIENT_SECRETS_FILE), GMAIL_SCOPES)
                     creds = flow.run_local_server(port=0)
 
                 # Save the credentials for future runs
@@ -128,10 +124,7 @@ class GmailConnector(BaseConnector):
         try:
             # List messages
             results = (
-                self._service.users()
-                .messages()
-                .list(userId="me", maxResults=self._max_results, labelIds=["INBOX"])
-                .execute()
+                self._service.users().messages().list(userId="me", maxResults=self._max_results, labelIds=["INBOX"]).execute()
             )
 
             messages = results.get("messages", [])
@@ -139,19 +132,12 @@ class GmailConnector(BaseConnector):
 
             for msg_info in messages:
                 try:
-                    msg = (
-                        self._service.users()
-                        .messages()
-                        .get(userId="me", id=msg_info["id"], format="full")
-                        .execute()
-                    )
+                    msg = self._service.users().messages().get(userId="me", id=msg_info["id"], format="full").execute()
                     doc = self._parse_message(msg)
                     if doc:
                         documents.append(doc)
                 except Exception as exc:
-                    self._logger.error(
-                        "Failed to fetch message %s: %s", msg_info["id"], exc
-                    )
+                    self._logger.error("Failed to fetch message %s: %s", msg_info["id"], exc)
 
         except Exception as exc:
             self._logger.error("Failed to list Gmail messages: %s", exc)
@@ -169,10 +155,7 @@ class GmailConnector(BaseConnector):
             A document dict, or None if parsing fails.
         """
         try:
-            headers = {
-                h["name"].lower(): h["value"]
-                for h in message.get("payload", {}).get("headers", [])
-            }
+            headers = {h["name"].lower(): h["value"] for h in message.get("payload", {}).get("headers", [])}
 
             subject = headers.get("subject", "No Subject")
             from_addr = headers.get("from", "Unknown")
@@ -217,12 +200,8 @@ class GmailConnector(BaseConnector):
         """
         body = ""
 
-        if payload.get("mimeType") == "text/plain" and payload.get("body", {}).get(
-            "data"
-        ):
-            body = base64.urlsafe_b64decode(
-                payload["body"]["data"]
-            ).decode("utf-8", errors="replace")
+        if payload.get("mimeType") == "text/plain" and payload.get("body", {}).get("data"):
+            body = base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", errors="replace")
         elif payload.get("parts"):
             for part in payload["parts"]:
                 part_body = self._extract_body(part)

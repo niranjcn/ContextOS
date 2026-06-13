@@ -1,14 +1,13 @@
 """Tests for core.encryption module."""
 
-import os
 import pytest
-from pathlib import Path
 
 
 @pytest.fixture
 def encryptor():
     """Create an Encryptor with a test key."""
     from core.encryption import Encryptor
+
     return Encryptor(key="test-encryption-key-for-unit-testing!")
 
 
@@ -61,7 +60,7 @@ class TestEncryptor:
 
     def test_verify_key_invalid(self):
         """verify_key() should work and a wrong-key decrypt should fail."""
-        from core.encryption import Encryptor, EncryptionError
+        from core.encryption import EncryptionError, Encryptor
 
         enc1 = Encryptor(key="key-one-for-testing-purposes-1234")
         enc2 = Encryptor(key="key-two-for-testing-purposes-5678")

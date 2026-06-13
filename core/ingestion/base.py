@@ -7,7 +7,6 @@ for fetching raw documents and syncing them into the ingestion pipeline.
 
 import abc
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -79,9 +78,7 @@ class BaseConnector(abc.ABC):
         stats = {"fetched": 0, "new": 0, "skipped": 0, "errors": 0}
 
         if not self.validate_config():
-            self._logger.error(
-                "Configuration validation failed for connector '%s'.", self.name
-            )
+            self._logger.error("Configuration validation failed for connector '%s'.", self.name)
             return stats
 
         self._logger.info("Starting sync for connector '%s'...", self.name)
@@ -117,9 +114,7 @@ class BaseConnector(abc.ABC):
                 )
                 stats["new"] += 1
             except Exception as exc:
-                self._logger.error(
-                    "Failed to process document %s: %s", doc_id, exc
-                )
+                self._logger.error("Failed to process document %s: %s", doc_id, exc)
                 stats["errors"] += 1
 
         self._logger.info(

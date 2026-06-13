@@ -1,7 +1,6 @@
 """Tests for core.storage.vectors module."""
 
-import pytest
-from core.storage.vectors import Chunk, SearchResult, VectorStore
+from core.storage.vectors import Chunk, SearchResult
 
 
 class TestVectorStore:

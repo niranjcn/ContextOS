@@ -40,9 +40,7 @@ async def list_people() -> PersonListResponse:
         return PersonListResponse(people=people, count=len(people))
     except Exception as exc:
         logger.error("Failed to list people: %s", exc)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve people: {str(exc)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve people: {str(exc)}")
 
 
 @router.get(
@@ -60,9 +58,7 @@ async def list_organizations() -> dict:
 
     try:
         results = graph_store.search_entities("")
-        orgs = sorted(
-            {r["name"] for r in results if r.get("type") == "Organization"}
-        )
+        orgs = sorted({r["name"] for r in results if r.get("type") == "Organization"})
         return {"organizations": orgs, "count": len(orgs)}
     except Exception as exc:
         logger.error("Failed to list organizations: %s", exc)
@@ -136,9 +132,7 @@ async def list_documents(
         return DocumentListResponse(documents=documents, count=len(documents))
     except Exception as exc:
         logger.error("Failed to list documents: %s", exc)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve documents: {str(exc)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve documents: {str(exc)}")
 
 
 @router.get(
@@ -160,6 +154,4 @@ async def graph_stats() -> GraphStatsResponse:
         return GraphStatsResponse(stats=stats)
     except Exception as exc:
         logger.error("Failed to get graph stats: %s", exc)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve stats: {str(exc)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve stats: {str(exc)}")

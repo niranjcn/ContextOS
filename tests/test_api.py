@@ -1,13 +1,13 @@
 """Tests for the FastAPI REST API endpoints."""
 
 import pytest
-from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture
 def test_client():
     """Create a test client for the FastAPI app."""
     from fastapi.testclient import TestClient
+
     from core.api.main import create_app
 
     app = create_app()

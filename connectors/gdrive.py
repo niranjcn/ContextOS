@@ -49,9 +49,7 @@ class GDriveConnector(BaseConnector):
                 if creds and creds.expired and creds.refresh_token:
                     creds.refresh(Request())
                 else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        str(settings.GOOGLE_CLIENT_SECRETS_FILE), DRIVE_SCOPES
-                    )
+                    flow = InstalledAppFlow.from_client_secrets_file(str(settings.GOOGLE_CLIENT_SECRETS_FILE), DRIVE_SCOPES)
                     creds = flow.run_local_server(port=0)
                 token_file.parent.mkdir(parents=True, exist_ok=True)
                 token_file.write_text(creds.to_json())
@@ -66,21 +64,27 @@ class GDriveConnector(BaseConnector):
             return []
         documents: list[dict[str, Any]] = []
         try:
-            results = self._service.files().list(
-                pageSize=self._max_results,
-                q="trashed=false",
-                fields="files(id, name, mimeType, modifiedTime)",
-            ).execute()
+            results = (
+                self._service.files()
+                .list(
+                    pageSize=self._max_results,
+                    q="trashed=false",
+                    fields="files(id, name, mimeType, modifiedTime)",
+                )
+                .execute()
+            )
             for f in results.get("files", []):
                 content = self._download(f)
                 if content:
-                    documents.append({
-                        "id": f"gdrive_{f['id']}",
-                        "source": "gdrive",
-                        "content": content,
-                        "metadata": {"filename": f.get("name", ""), "drive_id": f["id"]},
-                        "created_at": f.get("modifiedTime", datetime.now(timezone.utc).isoformat()),
-                    })
+                    documents.append(
+                        {
+                            "id": f"gdrive_{f['id']}",
+                            "source": "gdrive",
+                            "content": content,
+                            "metadata": {"filename": f.get("name", ""), "drive_id": f["id"]},
+                            "created_at": f.get("modifiedTime", datetime.now(timezone.utc).isoformat()),
+                        }
+                    )
         except Exception as exc:
             self._logger.error("Drive fetch failed: %s", exc)
         return documents

@@ -90,8 +90,7 @@ class BrowserHistoryConnector(BaseConnector):
             conn = sqlite3.connect(str(tmp_db))
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
-                "SELECT url, title, visit_count, last_visit_time "
-                "FROM urls ORDER BY last_visit_time DESC LIMIT ?",
+                "SELECT url, title, visit_count, last_visit_time " "FROM urls ORDER BY last_visit_time DESC LIMIT ?",
                 (self._max_entries,),
             )
             docs = []
@@ -100,14 +99,17 @@ class BrowserHistoryConnector(BaseConnector):
                 url = row["url"]
                 content = f"Visited: {title}\nURL: {url}\nVisit count: {row['visit_count']}"
                 import hashlib
+
                 doc_id = hashlib.sha256(url.encode()).hexdigest()[:16]
-                docs.append({
-                    "id": f"chrome_{doc_id}",
-                    "source": "browser_history",
-                    "content": content,
-                    "metadata": {"browser": "chrome", "url": url, "title": title},
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                })
+                docs.append(
+                    {
+                        "id": f"chrome_{doc_id}",
+                        "source": "browser_history",
+                        "content": content,
+                        "metadata": {"browser": "chrome", "url": url, "title": title},
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
             conn.close()
             return docs
         except Exception as exc:
@@ -141,14 +143,17 @@ class BrowserHistoryConnector(BaseConnector):
                 url = row["url"]
                 content = f"Visited: {title}\nURL: {url}\nVisit count: {row['visit_count']}"
                 import hashlib
+
                 doc_id = hashlib.sha256(url.encode()).hexdigest()[:16]
-                docs.append({
-                    "id": f"firefox_{doc_id}",
-                    "source": "browser_history",
-                    "content": content,
-                    "metadata": {"browser": "firefox", "url": url, "title": title},
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                })
+                docs.append(
+                    {
+                        "id": f"firefox_{doc_id}",
+                        "source": "browser_history",
+                        "content": content,
+                        "metadata": {"browser": "firefox", "url": url, "title": title},
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
             conn.close()
             return docs
         except Exception as exc:

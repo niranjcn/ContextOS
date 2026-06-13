@@ -64,9 +64,7 @@ class GraphStore:
             # Create node tables
             for table_name, schema in NODE_TABLES.items():
                 try:
-                    self._conn.execute(
-                        f"CREATE NODE TABLE IF NOT EXISTS {table_name} {schema}"
-                    )
+                    self._conn.execute(f"CREATE NODE TABLE IF NOT EXISTS {table_name} {schema}")
                 except kuzu.RuntimeError as exc:
                     if "already exists" not in str(exc).lower():
                         logger.warning("Schema creation note for %s: %s", table_name, exc)
@@ -75,11 +73,9 @@ class GraphStore:
             for rel_name, (from_table, to_table, props) in REL_TABLES.items():
                 try:
                     self._conn.execute(
-                        f"CREATE REL TABLE IF NOT EXISTS {rel_name} "
-                        f"(FROM {from_table} TO {to_table}, {props.strip('()')}) "
+                        f"CREATE REL TABLE IF NOT EXISTS {rel_name} " f"(FROM {from_table} TO {to_table}, {props.strip('()')}) "
                         if props != "()"
-                        else f"CREATE REL TABLE IF NOT EXISTS {rel_name} "
-                        f"(FROM {from_table} TO {to_table})"
+                        else f"CREATE REL TABLE IF NOT EXISTS {rel_name} " f"(FROM {from_table} TO {to_table})"
                     )
                 except kuzu.RuntimeError as exc:
                     if "already exists" not in str(exc).lower():
@@ -90,9 +86,7 @@ class GraphStore:
             logger.error("Failed to initialize graph schema: %s", exc)
             raise
 
-    def add_document(
-        self, doc_id: str, title: str, source: str, date: str
-    ) -> None:
+    def add_document(self, doc_id: str, title: str, source: str, date: str) -> None:
         """
         Add a document node to the graph (upsert).
 
@@ -104,8 +98,7 @@ class GraphStore:
         """
         try:
             self._conn.execute(
-                "MERGE (d:Document {doc_id: $doc_id}) "
-                "SET d.title = $title, d.source = $source, d.date = $date",
+                "MERGE (d:Document {doc_id: $doc_id}) " "SET d.title = $title, d.source = $source, d.date = $date",
                 parameters={
                     "doc_id": doc_id,
                     "title": title,
@@ -138,9 +131,7 @@ class GraphStore:
         except Exception as exc:
             logger.error("Failed to add %s '%s': %s", entity_type, name, exc)
 
-    def link_entity_to_document(
-        self, entity_type: str, name: str, doc_id: str
-    ) -> None:
+    def link_entity_to_document(self, entity_type: str, name: str, doc_id: str) -> None:
         """
         Create a relationship between an entity and a document.
 
@@ -164,16 +155,12 @@ class GraphStore:
 
         try:
             self._conn.execute(
-                f"MATCH (e:{entity_type} {{name: $name}}), "
-                f"(d:Document {{doc_id: $doc_id}}) "
-                f"MERGE (e)-[:{rel_name}]->(d)",
+                f"MATCH (e:{entity_type} {{name: $name}}), " f"(d:Document {{doc_id: $doc_id}}) " f"MERGE (e)-[:{rel_name}]->(d)",
                 parameters={"name": name, "doc_id": doc_id},
             )
             logger.debug("Linked %s '%s' to document %s", entity_type, name, doc_id)
         except Exception as exc:
-            logger.error(
-                "Failed to link %s '%s' to %s: %s", entity_type, name, doc_id, exc
-            )
+            logger.error("Failed to link %s '%s' to %s: %s", entity_type, name, doc_id, exc)
 
     def get_documents_for_person(self, name: str) -> list[dict[str, Any]]:
         """
@@ -187,19 +174,20 @@ class GraphStore:
         """
         try:
             result = self._conn.execute(
-                "MATCH (p:Person {name: $name})-[:MENTIONED_IN]->(d:Document) "
-                "RETURN d.doc_id, d.title, d.source, d.date",
+                "MATCH (p:Person {name: $name})-[:MENTIONED_IN]->(d:Document) " "RETURN d.doc_id, d.title, d.source, d.date",
                 parameters={"name": name},
             )
             documents = []
             while result.has_next():
                 row = result.get_next()
-                documents.append({
-                    "doc_id": row[0],
-                    "title": row[1],
-                    "source": row[2],
-                    "date": row[3],
-                })
+                documents.append(
+                    {
+                        "doc_id": row[0],
+                        "title": row[1],
+                        "source": row[2],
+                        "date": row[3],
+                    }
+                )
             return documents
         except Exception as exc:
             logger.error("Failed to get documents for person '%s': %s", name, exc)
@@ -213,9 +201,7 @@ class GraphStore:
             A sorted list of unique person names.
         """
         try:
-            result = self._conn.execute(
-                "MATCH (p:Person) RETURN p.name ORDER BY p.name"
-            )
+            result = self._conn.execute("MATCH (p:Person) RETURN p.name ORDER BY p.name")
             people = []
             while result.has_next():
                 row = result.get_next()
@@ -237,18 +223,19 @@ class GraphStore:
         """
         try:
             result = self._conn.execute(
-                f"MATCH (d:Document) RETURN d.doc_id, d.title, d.source, d.date "
-                f"ORDER BY d.date DESC LIMIT {limit}",
+                f"MATCH (d:Document) RETURN d.doc_id, d.title, d.source, d.date " f"ORDER BY d.date DESC LIMIT {limit}",
             )
             documents = []
             while result.has_next():
                 row = result.get_next()
-                documents.append({
-                    "doc_id": row[0],
-                    "title": row[1],
-                    "source": row[2],
-                    "date": row[3],
-                })
+                documents.append(
+                    {
+                        "doc_id": row[0],
+                        "title": row[1],
+                        "source": row[2],
+                        "date": row[3],
+                    }
+                )
             return documents
         except Exception as exc:
             logger.error("Failed to get recent documents: %s", exc)
@@ -265,13 +252,11 @@ class GraphStore:
             A list of dicts with keys: name, type.
         """
         results: list[dict[str, Any]] = []
-        search_pattern = f"%{query}%"
 
         for entity_type in ("Person", "Organization", "Topic"):
             try:
                 result = self._conn.execute(
-                    f"MATCH (e:{entity_type}) WHERE e.name CONTAINS $query "
-                    f"RETURN e.name",
+                    f"MATCH (e:{entity_type}) WHERE e.name CONTAINS $query " f"RETURN e.name",
                     parameters={"query": query},
                 )
                 while result.has_next():
@@ -297,9 +282,7 @@ class GraphStore:
         stats: dict[str, int] = {}
         for table_name in NODE_TABLES:
             try:
-                result = self._conn.execute(
-                    f"MATCH (n:{table_name}) RETURN COUNT(n)"
-                )
+                result = self._conn.execute(f"MATCH (n:{table_name}) RETURN COUNT(n)")
                 if result.has_next():
                     stats[f"{table_name}_count"] = result.get_next()[0]
             except Exception as exc:
@@ -308,9 +291,7 @@ class GraphStore:
 
         for rel_name in REL_TABLES:
             try:
-                result = self._conn.execute(
-                    f"MATCH ()-[r:{rel_name}]->() RETURN COUNT(r)"
-                )
+                result = self._conn.execute(f"MATCH ()-[r:{rel_name}]->() RETURN COUNT(r)")
                 if result.has_next():
                     stats[f"{rel_name}_count"] = result.get_next()[0]
             except Exception as exc:

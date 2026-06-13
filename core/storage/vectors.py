@@ -93,11 +93,7 @@ class VectorStore:
             self._client = chromadb.PersistentClient(path=str(self._db_path))
 
             # Use the sentence-transformers embedding function
-            self._embedding_fn = (
-                embedding_functions.SentenceTransformerEmbeddingFunction(
-                    model_name=settings.EMBEDDING_MODEL
-                )
-            )
+            self._embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=settings.EMBEDDING_MODEL)
 
             self._collection = self._client.get_or_create_collection(
                 name=COLLECTION_NAME,
@@ -195,16 +191,8 @@ class VectorStore:
             search_results = []
             if results and results["documents"] and results["documents"][0]:
                 for i, doc in enumerate(results["documents"][0]):
-                    metadata = (
-                        results["metadatas"][0][i]
-                        if results["metadatas"] and results["metadatas"][0]
-                        else {}
-                    )
-                    distance = (
-                        results["distances"][0][i]
-                        if results["distances"] and results["distances"][0]
-                        else 0.0
-                    )
+                    metadata = results["metadatas"][0][i] if results["metadatas"] and results["metadatas"][0] else {}
+                    distance = results["distances"][0][i] if results["distances"] and results["distances"][0] else 0.0
                     search_results.append(
                         SearchResult(
                             content=doc,

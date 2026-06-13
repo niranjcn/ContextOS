@@ -7,8 +7,6 @@ knowledge base.
 
 import hashlib
 import logging
-import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
@@ -57,9 +55,7 @@ async def ingest_text(request: IngestTextRequest) -> IngestResponse:
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
         logger.error("Text ingestion failed: %s", exc)
-        raise HTTPException(
-            status_code=500, detail=f"Ingestion failed: {str(exc)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(exc)}")
 
 
 @router.post(
@@ -89,8 +85,7 @@ async def ingest_file(file: UploadFile = File(...)) -> IngestResponse:
     if extension not in SUPPORTED_EXTENSIONS:
         raise HTTPException(
             status_code=422,
-            detail=f"Unsupported file type '{extension}'. "
-            f"Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}",
+            detail=f"Unsupported file type '{extension}'. " f"Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}",
         )
 
     try:
@@ -123,9 +118,7 @@ async def ingest_file(file: UploadFile = File(...)) -> IngestResponse:
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
         logger.error("File ingestion failed: %s", exc)
-        raise HTTPException(
-            status_code=500, detail=f"File ingestion failed: {str(exc)}"
-        )
+        raise HTTPException(status_code=500, detail=f"File ingestion failed: {str(exc)}")
 
 
 @router.get(
@@ -150,9 +143,7 @@ async def ingest_status() -> IngestStatusResponse:
         )
     except Exception as exc:
         logger.error("Failed to get ingest status: %s", exc)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve status: {str(exc)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve status: {str(exc)}")
 
 
 @router.delete(
@@ -201,9 +192,7 @@ async def delete_source(source_name: str) -> dict:
                     vec_exc,
                 )
 
-        logger.info(
-            "Deleted %d documents from source '%s'.", deleted_count, source_name
-        )
+        logger.info("Deleted %d documents from source '%s'.", deleted_count, source_name)
         return {
             "source": source_name,
             "deleted_count": deleted_count,

@@ -4,13 +4,12 @@ ContextOS API Models.
 Pydantic request and response models for all API endpoints.
 """
 
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ---- Query Models ---- #
+
 
 class QueryRequest(BaseModel):
     """Request body for the /query endpoint."""
@@ -30,15 +29,14 @@ class QueryResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
     answer: str = Field(description="The generated answer.")
-    sources: list[str] = Field(
-        default_factory=list, description="Sources cited in the answer."
-    )
+    sources: list[str] = Field(default_factory=list, description="Sources cited in the answer.")
     model_used: str = Field(description="The LLM model used for inference.")
     retrieval_time_ms: int = Field(description="Time spent on retrieval (ms).")
     inference_time_ms: int = Field(description="Time spent on inference (ms).")
 
 
 # ---- Ingest Models ---- #
+
 
 class IngestTextRequest(BaseModel):
     """Request body for the /ingest/text endpoint."""
@@ -68,9 +66,7 @@ class IngestResponse(BaseModel):
 
     doc_id: str = Field(description="The document ID that was ingested.")
     chunks_created: int = Field(description="Number of chunks created.")
-    entities: dict[str, Any] = Field(
-        default_factory=dict, description="Extracted entities."
-    )
+    entities: dict[str, Any] = Field(default_factory=dict, description="Extracted entities.")
     status: str = Field(description="Processing status.")
 
 
@@ -78,12 +74,11 @@ class IngestStatusResponse(BaseModel):
     """Response body for the /ingest/status endpoint."""
 
     total: int = Field(description="Total number of processed documents.")
-    by_source: dict[str, int] = Field(
-        default_factory=dict, description="Document count by source."
-    )
+    by_source: dict[str, int] = Field(default_factory=dict, description="Document count by source.")
 
 
 # ---- Draft & Brief Models ---- #
+
 
 class DraftRequest(BaseModel):
     """Request body for the /query/draft endpoint."""
@@ -126,21 +121,18 @@ class DraftResponse(BaseModel):
     """Response body for the /query/draft endpoint."""
 
     draft: str = Field(description="The generated draft text.")
-    context_used: list[str] = Field(
-        default_factory=list, description="Sources used for context."
-    )
+    context_used: list[str] = Field(default_factory=list, description="Sources used for context.")
 
 
 class BriefResponse(BaseModel):
     """Response body for the /query/brief endpoint."""
 
     brief: str = Field(description="The generated meeting brief.")
-    people_found: list[str] = Field(
-        default_factory=list, description="People found in the knowledge graph."
-    )
+    people_found: list[str] = Field(default_factory=list, description="People found in the knowledge graph.")
 
 
 # ---- Graph Models ---- #
+
 
 class PersonListResponse(BaseModel):
     """Response body for the /graph/people endpoint."""
@@ -161,46 +153,38 @@ class DocumentResponse(BaseModel):
 class DocumentListResponse(BaseModel):
     """Response body for document list endpoints."""
 
-    documents: list[DocumentResponse] = Field(
-        default_factory=list, description="List of documents."
-    )
+    documents: list[DocumentResponse] = Field(default_factory=list, description="List of documents.")
     count: int = Field(description="Number of documents returned.")
 
 
 class GraphStatsResponse(BaseModel):
     """Response body for the /graph/stats endpoint."""
 
-    stats: dict[str, int] = Field(
-        default_factory=dict, description="Node and relationship counts."
-    )
+    stats: dict[str, int] = Field(default_factory=dict, description="Node and relationship counts.")
 
 
 # ---- Health Models ---- #
+
 
 class HealthResponse(BaseModel):
     """Response body for the /health endpoint."""
 
     status: str = Field(description="Overall system status.")
     ollama_running: bool = Field(description="Whether Ollama is reachable.")
-    models_available: list[str] = Field(
-        default_factory=list, description="Available Ollama models."
-    )
+    models_available: list[str] = Field(default_factory=list, description="Available Ollama models.")
     vector_count: int = Field(description="Number of vectors in the store.")
-    graph_node_count: int = Field(
-        description="Total number of nodes in the graph."
-    )
+    graph_node_count: int = Field(description="Total number of nodes in the graph.")
     uptime_seconds: float = Field(description="Server uptime in seconds.")
 
 
 class ModelsResponse(BaseModel):
     """Response body for the /health/models endpoint."""
 
-    models: list[str] = Field(
-        default_factory=list, description="Available model names."
-    )
+    models: list[str] = Field(default_factory=list, description="Available model names.")
 
 
 # ---- Generic Models ---- #
+
 
 class ErrorResponse(BaseModel):
     """Generic error response."""

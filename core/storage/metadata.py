@@ -82,9 +82,7 @@ class MetadataStore:
         finally:
             conn.close()
 
-    def mark_processed(
-        self, doc_id: str, source: str, metadata: dict[str, Any]
-    ) -> None:
+    def mark_processed(self, doc_id: str, source: str, metadata: dict[str, Any]) -> None:
         """
         Mark a document as processed.
 
@@ -129,9 +127,7 @@ class MetadataStore:
         """
         conn = self._get_connection()
         try:
-            cursor = conn.execute(
-                f"SELECT 1 FROM {TABLE_NAME} WHERE doc_id = ?", (doc_id,)
-            )
+            cursor = conn.execute(f"SELECT 1 FROM {TABLE_NAME} WHERE doc_id = ?", (doc_id,))
             result = cursor.fetchone() is not None
             return result
         except sqlite3.Error as exc:
@@ -150,18 +146,19 @@ class MetadataStore:
         conn = self._get_connection()
         try:
             cursor = conn.execute(
-                f"SELECT doc_id, source, metadata_json, processed_at, updated_at "
-                f"FROM {TABLE_NAME} ORDER BY processed_at DESC"
+                f"SELECT doc_id, source, metadata_json, processed_at, updated_at " f"FROM {TABLE_NAME} ORDER BY processed_at DESC"
             )
             results = []
             for row in cursor.fetchall():
-                results.append({
-                    "doc_id": row["doc_id"],
-                    "source": row["source"],
-                    "metadata": json.loads(row["metadata_json"]),
-                    "processed_at": row["processed_at"],
-                    "updated_at": row["updated_at"],
-                })
+                results.append(
+                    {
+                        "doc_id": row["doc_id"],
+                        "source": row["source"],
+                        "metadata": json.loads(row["metadata_json"]),
+                        "processed_at": row["processed_at"],
+                        "updated_at": row["updated_at"],
+                    }
+                )
             return results
         except sqlite3.Error as exc:
             logger.error("Failed to retrieve processed documents: %s", exc)
@@ -184,9 +181,7 @@ class MetadataStore:
             total = cursor.fetchone()["total"]
 
             # Count by source
-            cursor = conn.execute(
-                f"SELECT source, COUNT(*) as count FROM {TABLE_NAME} GROUP BY source"
-            )
+            cursor = conn.execute(f"SELECT source, COUNT(*) as count FROM {TABLE_NAME} GROUP BY source")
             by_source = {row["source"]: row["count"] for row in cursor.fetchall()}
 
             return {"total": total, "by_source": by_source}
@@ -208,9 +203,7 @@ class MetadataStore:
         """
         conn = self._get_connection()
         try:
-            cursor = conn.execute(
-                f"DELETE FROM {TABLE_NAME} WHERE doc_id = ?", (doc_id,)
-            )
+            cursor = conn.execute(f"DELETE FROM {TABLE_NAME} WHERE doc_id = ?", (doc_id,))
             conn.commit()
             removed = cursor.rowcount > 0
             if removed:

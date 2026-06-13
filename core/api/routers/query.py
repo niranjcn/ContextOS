@@ -45,15 +45,12 @@ def _check_rate_limit(client_id: str = "default") -> None:
     window_start = now - _RATE_LIMIT_WINDOW
 
     # Clean old entries
-    _request_counts[client_id] = [
-        t for t in _request_counts[client_id] if t > window_start
-    ]
+    _request_counts[client_id] = [t for t in _request_counts[client_id] if t > window_start]
 
     if len(_request_counts[client_id]) >= _RATE_LIMIT_MAX:
         raise HTTPException(
             status_code=429,
-            detail=f"Rate limit exceeded. Maximum {_RATE_LIMIT_MAX} requests "
-            f"per {_RATE_LIMIT_WINDOW} seconds.",
+            detail=f"Rate limit exceeded. Maximum {_RATE_LIMIT_MAX} requests " f"per {_RATE_LIMIT_WINDOW} seconds.",
         )
 
     _request_counts[client_id].append(now)

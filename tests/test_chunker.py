@@ -1,6 +1,7 @@
 """Tests for core.ingestion.chunker module."""
 
 import pytest
+
 from core.ingestion.chunker import Chunk, TextChunker
 
 

@@ -17,10 +17,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from core.ingestion.pipeline import IngestionPipeline
 from core.inference.engine import ContextEngine
 from core.inference.prompt_builder import PromptBuilder
 from core.inference.retriever import HybridRetriever
+from core.ingestion.pipeline import IngestionPipeline
 from core.storage.graph import GraphStore
 from core.storage.metadata import MetadataStore
 from core.storage.vectors import VectorStore
@@ -205,15 +205,11 @@ def main() -> None:
         if result["status"] == "success":
             total_chunks += result["chunks_created"]
 
-    console.print(
-        f"\n[green]✓ Ingested {len(SAMPLE_DOCUMENTS)} documents → {total_chunks} chunks[/green]"
-    )
+    console.print(f"\n[green]✓ Ingested {len(SAMPLE_DOCUMENTS)} documents → {total_chunks} chunks[/green]")
     console.print(f"[dim]Vector store now has {vector_store.count()} total chunks[/dim]\n")
 
     if not engine.is_ready():
-        console.print(
-            "[red]Ollama not ready. Open Ollama and load a model before running queries.[/red]"
-        )
+        console.print("[red]Ollama not ready. Open Ollama and load a model before running queries.[/red]")
         return
 
     console.print("[green]✓ Ollama connected[/green]\n")
@@ -234,11 +230,7 @@ def main() -> None:
         console.print(f"[dim]Q: {question}[/dim]")
 
         response = engine.query(question)
-        short_answer = (
-            response.answer[:120] + "..."
-            if len(response.answer) > 120
-            else response.answer
-        )
+        short_answer = response.answer[:120] + "..." if len(response.answer) > 120 else response.answer
         time_str = f"{response.inference_time_ms}ms"
 
         console.print(f"[green]A:[/green] {response.answer}\n")

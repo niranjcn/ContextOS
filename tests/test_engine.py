@@ -1,7 +1,8 @@
 """Tests for core.inference.engine module."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from core.inference.retriever import RetrievalResult
 from core.storage.vectors import SearchResult
@@ -43,9 +44,7 @@ class TestContextEngine:
 
         with patch("core.inference.engine.ollama") as mock_ollama:
             mock_client = MagicMock()
-            mock_client.chat.return_value = {
-                "message": {"content": "This is the AI answer."}
-            }
+            mock_client.chat.return_value = {"message": {"content": "This is the AI answer."}}
             mock_client.list.return_value = {"models": [{"name": "llama3.2"}]}
             mock_ollama.Client.return_value = mock_client
 
@@ -77,9 +76,7 @@ class TestContextEngine:
 
         with patch("core.inference.engine.ollama") as mock_ollama:
             mock_client = MagicMock()
-            mock_client.list.return_value = {
-                "models": [{"name": "llama3.2"}]
-            }
+            mock_client.list.return_value = {"models": [{"name": "llama3.2"}]}
             mock_ollama.Client.return_value = mock_client
 
             engine = ContextEngine(MagicMock(), MagicMock())

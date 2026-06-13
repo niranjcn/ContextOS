@@ -5,15 +5,14 @@ Provides AES-256-GCM encryption and decryption for data at rest.
 Uses PBKDF2 key derivation from the configured encryption key.
 """
 
-import hashlib
 import logging
 import os
 from pathlib import Path
 
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
 
 from core.config import settings
 
@@ -54,9 +53,7 @@ class Encryptor:
         """
         self._key_material = key or settings.CONTEXTOS_ENCRYPTION_KEY
         if not self._key_material:
-            raise EncryptionError(
-                "No encryption key configured. Set CONTEXTOS_ENCRYPTION_KEY in .env"
-            )
+            raise EncryptionError("No encryption key configured. Set CONTEXTOS_ENCRYPTION_KEY in .env")
         logger.debug("Encryptor initialized.")
 
     def _derive_key(self, salt: bytes) -> bytes:
@@ -123,9 +120,7 @@ class Encryptor:
         """
         try:
             if len(data) < SALT_SIZE + NONCE_SIZE + 1:
-                raise EncryptionError(
-                    "Encrypted data too short — likely corrupted or invalid."
-                )
+                raise EncryptionError("Encrypted data too short — likely corrupted or invalid.")
             salt = data[:SALT_SIZE]
             nonce = data[SALT_SIZE : SALT_SIZE + NONCE_SIZE]
             ciphertext = data[SALT_SIZE + NONCE_SIZE :]
@@ -207,14 +202,10 @@ class Encryptor:
             encrypted = self.encrypt(TEST_PLAINTEXT)
             decrypted = self.decrypt(encrypted)
             if decrypted != TEST_PLAINTEXT:
-                raise EncryptionError(
-                    "Key verification failed: round-trip mismatch."
-                )
+                raise EncryptionError("Key verification failed: round-trip mismatch.")
             logger.info("Encryption key verified successfully.")
             return True
         except EncryptionError:
             raise
         except Exception as exc:
-            raise EncryptionError(
-                f"Key verification failed: {exc}"
-            ) from exc
+            raise EncryptionError(f"Key verification failed: {exc}") from exc

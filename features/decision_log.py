@@ -7,8 +7,7 @@ meetings, and emails. Tracks who made decisions, when, and the context.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from core.inference.retriever import HybridRetriever
 from core.storage.vectors import VectorStore
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Decision:
     """Represents a logged decision."""
+
     summary: str
     context: str = ""
     participants: list[str] = field(default_factory=list)
@@ -56,13 +56,15 @@ class DecisionLog:
 
         decisions: list[dict[str, Any]] = []
         for chunk in result.semantic_chunks:
-            decisions.append({
-                "content": chunk.content,
-                "source": chunk.metadata.get("source", "unknown"),
-                "doc_id": chunk.metadata.get("doc_id", ""),
-                "score": chunk.score,
-                "related_people": result.mentioned_people,
-            })
+            decisions.append(
+                {
+                    "content": chunk.content,
+                    "source": chunk.metadata.get("source", "unknown"),
+                    "doc_id": chunk.metadata.get("doc_id", ""),
+                    "score": chunk.score,
+                    "related_people": result.mentioned_people,
+                }
+            )
 
         logger.info("Found %d decision-related results for '%s'.", len(decisions), query)
         return decisions
@@ -95,9 +97,11 @@ class DecisionLog:
         for chunk in result.semantic_chunks[:k]:
             content_lower = chunk.content.lower()
             if any(kw in content_lower for kw in ("decided", "agreed", "decision", "approved")):
-                decisions.append({
-                    "content": chunk.content,
-                    "source": chunk.metadata.get("source", ""),
-                    "person": name,
-                })
+                decisions.append(
+                    {
+                        "content": chunk.content,
+                        "source": chunk.metadata.get("source", ""),
+                        "person": name,
+                    }
+                )
         return decisions

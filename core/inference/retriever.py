@@ -8,7 +8,6 @@ then performs graph lookup, followed by vector search, and merges results.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
 
 from core.ingestion.extractor import EntityExtractor
 from core.storage.graph import GraphStore
@@ -125,9 +124,7 @@ class HybridRetriever:
                         if doc_title and doc_title not in result.mentioned_docs:
                             result.mentioned_docs.append(doc_title)
                 except Exception as exc:
-                    logger.warning(
-                        "Graph lookup failed for person '%s': %s", person, exc
-                    )
+                    logger.warning("Graph lookup failed for person '%s': %s", person, exc)
 
             # Search for organizations in the graph
             for org in entities.organizations:
@@ -138,9 +135,7 @@ class HybridRetriever:
                         if fact not in result.graph_facts:
                             result.graph_facts.append(fact)
                 except Exception as exc:
-                    logger.warning(
-                        "Graph lookup failed for org '%s': %s", org, exc
-                    )
+                    logger.warning("Graph lookup failed for org '%s': %s", org, exc)
 
         # Step 3: Vector similarity search
         try:

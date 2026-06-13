@@ -6,7 +6,6 @@ pre-initialized stores, and sample data.
 """
 
 import os
-import sys
 from pathlib import Path
 
 import pytest

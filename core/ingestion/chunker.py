@@ -97,10 +97,7 @@ class TextChunker:
         raw_splits = self._splitter.split_text(text)
 
         # Filter out short chunks
-        valid_splits = [
-            split for split in raw_splits
-            if len(split.strip()) >= MIN_CHUNK_LENGTH
-        ]
+        valid_splits = [split for split in raw_splits if len(split.strip()) >= MIN_CHUNK_LENGTH]
 
         if not valid_splits:
             logger.debug("No valid chunks after filtering (all too short).")
@@ -131,9 +128,7 @@ class TextChunker:
         )
         return chunks
 
-    def chunk_documents(
-        self, documents: list[dict[str, Any]]
-    ) -> list[Chunk]:
+    def chunk_documents(self, documents: list[dict[str, Any]]) -> list[Chunk]:
         """
         Chunk multiple documents at once.
 

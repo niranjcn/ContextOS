@@ -6,7 +6,6 @@ topics, and past interactions from the knowledge graph.
 """
 
 import logging
-from typing import Any
 
 from core.config import settings
 from core.inference.engine import ContextEngine, EngineResponse

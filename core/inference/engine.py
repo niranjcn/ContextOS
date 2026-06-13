@@ -9,7 +9,7 @@ with automatic fallback to alternative models.
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import ollama
 
@@ -146,9 +146,7 @@ class ContextEngine:
         )
         return response
 
-    def query_stream(
-        self, question: str
-    ) -> tuple[RetrievalResult, Any]:
+    def query_stream(self, question: str) -> tuple[RetrievalResult, Any]:
         """
         Execute a streaming RAG query.
 
@@ -182,9 +180,7 @@ class ContextEngine:
             )
             return retrieval, stream
         except Exception as primary_exc:
-            logger.warning(
-                "Primary model stream failed: %s. Trying fallback...", primary_exc
-            )
+            logger.warning("Primary model stream failed: %s. Trying fallback...", primary_exc)
             fallback = settings.OLLAMA_FALLBACK_MODEL
             try:
                 stream = self._ollama_client.chat(
@@ -201,8 +197,7 @@ class ContextEngine:
                     fallback_exc,
                 )
                 raise RuntimeError(
-                    "All models failed to generate a response. "
-                    "Please check that Ollama is running and a model is available."
+                    "All models failed to generate a response. " "Please check that Ollama is running and a model is available."
                 ) from fallback_exc
 
     def generate(self, prompt: str, model: str = "") -> str:
@@ -240,24 +235,16 @@ class ContextEngine:
         """
         try:
             models_response = self._ollama_client.list()
-            available = [
-                m.get("name", m.get("model", ""))
-                for m in models_response.get("models", [])
-            ]
-            primary_available = any(
-                settings.OLLAMA_MODEL in name for name in available
-            )
-            fallback_available = any(
-                settings.OLLAMA_FALLBACK_MODEL in name for name in available
-            )
+            available = [m.get("name", m.get("model", "")) for m in models_response.get("models", [])]
+            primary_available = any(settings.OLLAMA_MODEL in name for name in available)
+            fallback_available = any(settings.OLLAMA_FALLBACK_MODEL in name for name in available)
 
             if primary_available or fallback_available:
                 logger.debug("Engine ready. Available models: %s", available)
                 return True
 
             logger.warning(
-                "Ollama running but no suitable models found. "
-                "Available: %s, Need: %s or %s",
+                "Ollama running but no suitable models found. " "Available: %s, Need: %s or %s",
                 available,
                 settings.OLLAMA_MODEL,
                 settings.OLLAMA_FALLBACK_MODEL,
@@ -276,10 +263,7 @@ class ContextEngine:
         """
         try:
             models_response = self._ollama_client.list()
-            return [
-                m.get("name", m.get("model", ""))
-                for m in models_response.get("models", [])
-            ]
+            return [m.get("name", m.get("model", "")) for m in models_response.get("models", [])]
         except Exception as exc:
             logger.warning("Could not list Ollama models: %s", exc)
             return []

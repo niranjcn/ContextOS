@@ -7,13 +7,11 @@ and the inference engine. Provides lifecycle events for startup/shutdown.
 
 import logging
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -125,9 +123,7 @@ async def lifespan(app: FastAPI):
         if _context.engine.is_ready():
             logger.info("Ollama is running and models are available.")
         else:
-            logger.warning(
-                "Ollama is not available. Queries will fail until Ollama is started."
-            )
+            logger.warning("Ollama is not available. Queries will fail until Ollama is started.")
 
         logger.info("ContextOS startup complete.")
 
@@ -185,12 +181,13 @@ def create_app() -> FastAPI:
     )
 
     # Register routers
-    from core.api.routers import graph, health, ingest, query
+    from core.api.routers import connectors, graph, health, ingest, query
 
     app.include_router(health.router)
     app.include_router(query.router)
     app.include_router(graph.router)
     app.include_router(ingest.router)
+    app.include_router(connectors.router)
 
     @app.get("/", tags=["root"])
     async def root():

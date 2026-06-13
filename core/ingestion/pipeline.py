@@ -9,8 +9,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from core.ingestion.chunker import Chunk, TextChunker
-from core.ingestion.extractor import EntityExtractor, ExtractedEntities
+from core.ingestion.chunker import TextChunker
+from core.ingestion.extractor import EntityExtractor
 from core.storage.graph import GraphStore
 from core.storage.metadata import MetadataStore
 from core.storage.vectors import VectorStore
@@ -81,9 +81,7 @@ class IngestionPipeline:
         source = document.get("source", "unknown")
         content = document.get("content", "")
         metadata = document.get("metadata", {})
-        created_at = document.get(
-            "created_at", datetime.now(timezone.utc).isoformat()
-        )
+        created_at = document.get("created_at", datetime.now(timezone.utc).isoformat())
 
         if not doc_id:
             raise ValueError("Document must have an 'id' field.")
@@ -187,12 +185,7 @@ class IngestionPipeline:
                 "Successfully processed document %s: %d chunks, %d entities.",
                 doc_id,
                 len(chunks),
-                sum(
-                    len(entities.people)
-                    + len(entities.organizations)
-                    + len(entities.topics)
-                    for _ in [1]
-                ),
+                sum(len(entities.people) + len(entities.organizations) + len(entities.topics) for _ in [1]),
             )
             return result
 
@@ -206,9 +199,7 @@ class IngestionPipeline:
                 "error": str(exc),
             }
 
-    def process_batch(
-        self, documents: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def process_batch(self, documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Process multiple documents through the pipeline.
 
@@ -297,10 +288,7 @@ class IngestionPipeline:
         suffix = path.suffix.lower()
         supported = {".txt", ".md", ".pdf", ".docx"}
         if suffix not in supported:
-            raise ValueError(
-                f"Unsupported file type '{suffix}'. "
-                f"Supported: {', '.join(sorted(supported))}"
-            )
+            raise ValueError(f"Unsupported file type '{suffix}'. " f"Supported: {', '.join(sorted(supported))}")
 
         content = ""
 
@@ -315,9 +303,7 @@ class IngestionPipeline:
                     pages = [page.extract_text() or "" for page in pdf.pages]
                     content = "\n\n".join(pages)
             except ImportError:
-                logger.warning(
-                    "pdfplumber not installed. Falling back to raw text read for PDF."
-                )
+                logger.warning("pdfplumber not installed. Falling back to raw text read for PDF.")
                 content = path.read_text(encoding="utf-8", errors="replace")
 
         elif suffix == ".docx":
@@ -325,13 +311,9 @@ class IngestionPipeline:
                 import docx
 
                 doc = docx.Document(str(path))
-                content = "\n\n".join(
-                    paragraph.text for paragraph in doc.paragraphs if paragraph.text
-                )
+                content = "\n\n".join(paragraph.text for paragraph in doc.paragraphs if paragraph.text)
             except ImportError:
-                logger.warning(
-                    "python-docx not installed. Falling back to raw text read for DOCX."
-                )
+                logger.warning("python-docx not installed. Falling back to raw text read for DOCX.")
                 content = path.read_text(encoding="utf-8", errors="replace")
 
         if not content.strip():

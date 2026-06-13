@@ -1,7 +1,5 @@
 """Tests for core.storage.graph module."""
 
-import pytest
-
 
 class TestGraphStore:
     """Tests for the GraphStore class."""

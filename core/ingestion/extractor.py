@@ -7,7 +7,6 @@ locations) and key topics (noun chunks) from text content.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +56,8 @@ class EntityExtractor:
 
             self._nlp = spacy.load("en_core_web_sm")
             logger.info("EntityExtractor initialized with spaCy en_core_web_sm.")
-        except OSError as exc:
-            logger.error(
-                "spaCy model 'en_core_web_sm' not found. "
-                "Install it with: python -m spacy download en_core_web_sm"
-            )
+        except OSError:
+            logger.error("spaCy model 'en_core_web_sm' not found. " "Install it with: python -m spacy download en_core_web_sm")
             raise
 
     def extract(self, text: str) -> ExtractedEntities:
@@ -110,11 +106,7 @@ class EntityExtractor:
             seen_topics: set[str] = set()
             for chunk in doc.noun_chunks:
                 topic = chunk.text.strip().lower()
-                if (
-                    len(topic) >= MIN_CHUNK_LENGTH
-                    and topic not in seen_topics
-                    and not topic.startswith(("the ", "a ", "an "))
-                ):
+                if len(topic) >= MIN_CHUNK_LENGTH and topic not in seen_topics and not topic.startswith(("the ", "a ", "an ")):
                     seen_topics.add(topic)
                     topics.append(chunk.text.strip())
                     if len(topics) >= MAX_TOPICS:
