@@ -99,7 +99,7 @@ class ContextEngine:
         model = settings.OLLAMA_MODEL
 
         try:
-            answer = self._call_ollama(prompt, model)
+            answer = self.generate(prompt, model)
             response.model_used = model
         except Exception as primary_exc:
             logger.warning(
@@ -109,7 +109,7 @@ class ContextEngine:
             )
             fallback_model = settings.OLLAMA_FALLBACK_MODEL
             try:
-                answer = self._call_ollama(prompt, fallback_model)
+                answer = self.generate(prompt, fallback_model)
                 response.model_used = fallback_model
             except Exception as fallback_exc:
                 logger.error(
@@ -181,26 +181,41 @@ class ContextEngine:
                 options={"num_predict": 2048},
             )
             return retrieval, stream
-        except Exception as exc:
+        except Exception as primary_exc:
             logger.warning(
-                "Primary model stream failed: %s. Trying fallback...", exc
+                "Primary model stream failed: %s. Trying fallback...", primary_exc
             )
             fallback = settings.OLLAMA_FALLBACK_MODEL
-            stream = self._ollama_client.chat(
-                model=fallback,
-                messages=[{"role": "user", "content": prompt}],
-                stream=True,
-                options={"num_predict": 2048},
-            )
-            return retrieval, stream
+            try:
+                stream = self._ollama_client.chat(
+                    model=fallback,
+                    messages=[{"role": "user", "content": prompt}],
+                    stream=True,
+                    options={"num_predict": 2048},
+                )
+                return retrieval, stream
+            except Exception as fallback_exc:
+                logger.error(
+                    "Fallback model '%s' stream also failed: %s",
+                    fallback,
+                    fallback_exc,
+                )
+                raise RuntimeError(
+                    "All models failed to generate a response. "
+                    "Please check that Ollama is running and a model is available."
+                ) from fallback_exc
 
-    def _call_ollama(self, prompt: str, model: str) -> str:
+    def generate(self, prompt: str, model: str = "") -> str:
         """
-        Call Ollama for LLM inference.
+        Generate a response from the LLM.
+
+        Sends a prompt directly to Ollama, bypassing the RAG retrieval pipeline.
+        Useful for features that do their own retrieval and want to call the LLM
+        with a custom prompt.
 
         Args:
             prompt: The full prompt to send to the model.
-            model: The Ollama model name to use.
+            model: Optional model name. Defaults to the configured primary model.
 
         Returns:
             The generated response text.
@@ -208,6 +223,7 @@ class ContextEngine:
         Raises:
             Exception: If the Ollama call fails.
         """
+        model = model or settings.OLLAMA_MODEL
         response = self._ollama_client.chat(
             model=model,
             messages=[{"role": "user", "content": prompt}],

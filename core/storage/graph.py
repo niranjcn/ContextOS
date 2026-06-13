@@ -237,11 +237,8 @@ class GraphStore:
         """
         try:
             result = self._conn.execute(
-                # FIXED — inject the number directly into the string
-f"MATCH (d:Document) RETURN d.doc_id, d.title, d.source, d.date" 
-                "ORDER BY d.date DESC LIMIT {limit}",
-                
-                parameters={"limit": limit},
+                f"MATCH (d:Document) RETURN d.doc_id, d.title, d.source, d.date "
+                f"ORDER BY d.date DESC LIMIT {limit}",
             )
             documents = []
             while result.has_next():

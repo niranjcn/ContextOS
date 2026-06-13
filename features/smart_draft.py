@@ -8,6 +8,7 @@ by analyzing their writing style from previously ingested documents.
 import logging
 from typing import Any
 
+from core.config import settings
 from core.inference.engine import ContextEngine, EngineResponse
 from core.inference.prompt_builder import PromptBuilder
 from core.inference.retriever import HybridRetriever
@@ -63,20 +64,12 @@ class SmartDraft:
             style_examples=style_text,
         )
 
-        import ollama as ollama_lib
-        from core.config import settings
-
         try:
-            response = ollama_lib.Client(host=settings.OLLAMA_HOST).chat(
-                model=settings.OLLAMA_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            answer = self._engine.generate(prompt, settings.OLLAMA_MODEL)
             return EngineResponse(
-                answer=response["message"]["content"],
+                answer=answer,
                 sources=[],
                 model_used=settings.OLLAMA_MODEL,
-                retrieval_time_ms=0,
-                inference_time_ms=0,
             )
         except Exception as exc:
             logger.error("Draft generation failed: %s", exc)
@@ -106,16 +99,10 @@ class SmartDraft:
             style_examples="Use a professional, clear tone.",
         )
 
-        import ollama as ollama_lib
-        from core.config import settings
-
         try:
-            response = ollama_lib.Client(host=settings.OLLAMA_HOST).chat(
-                model=settings.OLLAMA_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            answer = self._engine.generate(prompt, settings.OLLAMA_MODEL)
             return EngineResponse(
-                answer=response["message"]["content"],
+                answer=answer,
                 sources=[c.metadata.get("source", "") for c in context_result.semantic_chunks],
                 model_used=settings.OLLAMA_MODEL,
             )

@@ -27,6 +27,8 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     """Response body for the /query endpoint."""
 
+    model_config = {"protected_namespaces": ()}
+
     answer: str = Field(description="The generated answer.")
     sources: list[str] = Field(
         default_factory=list, description="Sources cited in the answer."

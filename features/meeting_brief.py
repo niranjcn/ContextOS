@@ -8,6 +8,7 @@ topics, and past interactions from the knowledge graph.
 import logging
 from typing import Any
 
+from core.config import settings
 from core.inference.engine import ContextEngine, EngineResponse
 from core.inference.prompt_builder import PromptBuilder
 from core.inference.retriever import HybridRetriever
@@ -78,16 +79,10 @@ class MeetingBrief:
 
         prompt = self._prompt_builder.build_brief_prompt(meeting_info, history)
 
-        import ollama as ollama_lib
-        from core.config import settings
-
         try:
-            response = ollama_lib.Client(host=settings.OLLAMA_HOST).chat(
-                model=settings.OLLAMA_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            answer = self._engine.generate(prompt, settings.OLLAMA_MODEL)
             return EngineResponse(
-                answer=response["message"]["content"],
+                answer=answer,
                 sources=[],
                 model_used=settings.OLLAMA_MODEL,
             )

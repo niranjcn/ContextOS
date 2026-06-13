@@ -27,37 +27,45 @@ machine. Full stop.
 
 ---
 
-## Status
+## Status — What's Actually Done
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 1 | In progress | Foundation — local LLM + basic RAG |
-| Phase 2 | Planned | Ingestion engine — email, docs, files |
-| Phase 3 | Planned | Context engine — hybrid retrieval |
-| Phase 4 | Planned | API + React dashboard |
-| Phase 5 | Planned | Smart drafting, meeting briefs, decision log |
-| Phase 6 | Planned | Open source launch + enterprise edition |
+| Layer | Completion | What's working |
+|-------|-----------|----------------|
+| **Core Engine** | ~95% | Storage (Kuzu graph, ChromaDB vectors, SQLite metadata), ingestion pipeline (spaCy NER, chunking), hybrid retrieval (graph + vector), Ollama RAG engine |
+| **API** | ~95% | FastAPI with all endpoints (query, stream, ingest, graph, health) |
+| **CLI** | ~95% | 10+ Typer commands with Rich-formatted output |
+| **Encryption** | 100% | AES-256-GCM at rest for all ingested content |
+| **Connectors** | ~75% | Local file watcher ✓, Gmail (OAuth, needs setup), GDrive (minimal), Chrome/Firefox history ✓ |
+| **Features** | ~85% | Smart drafting, meeting briefs, decision log search, Whisper transcription (manual install) |
+| **Dashboard** | ~70% | React + Vite UI with query, graph browse, ingest, status tabs — functional but basic |
+| **Tests** | ~95% | 60+ tests covering storage, ingestion, inference, encryption, API |
+| **Infrastructure** | ~80% | Docker ✓, Docker Compose ✓, K8s manifests (templates), Terraform (needs backend config), CI/CD (GitHub Actions + Jenkins) |
+| **Browser extension** | 0% | Not started |
+| **Desktop builds** | 0% | No macOS/Windows packages yet |
+
+The core engine (storage → ingestion → retrieval → LLM) is **fully functional end-to-end**. You can run it today. Connectors and dashboard are usable but need polish. Details below.
 
 ---
 
 ## Core Features
 
-### What it does today (Phase 1)
+### What works right now
 - Run a local LLM (Llama 3.2 or Mistral) via Ollama — no API key needed
-- Ingest any text file and ask questions about it in natural language
-- Local vector search over ingested documents using ChromaDB
-- REST API on `localhost:8000` for programmatic access
-- CLI: `contextos query "what did I decide about vendor X?"`
-
-### What it will do (Phases 2–5)
-- **Gmail / Google Drive connector** — auto-ingests your emails and documents
-- **Local file watcher** — monitors a folder, ingests new files automatically
-- **Meeting transcription** — drop an audio file, Whisper transcribes + ingests it
-- **Knowledge graph** — entities (people, orgs, topics) linked to documents in Kuzu
-- **Smart email drafting** — writes emails in your tone based on your history
-- **Meeting brief generator** — 1-page brief 30 min before any calendar event
-- **Decision log** — searchable history of past choices with source citations
-- **Browser extension** — captures your reading context in real time
+- Ingest text, markdown, PDF, and DOCX files
+- Ask questions in natural language — answers with source citations
+- **Hybrid retrieval** — semantic vector search (ChromaDB) + entity graph traversal (Kuzu) for better answers
+- **Knowledge graph** — people, orgs, topics automatically extracted via spaCy NER and linked to documents
+- **REST API** on `localhost:8000` with interactive `/docs`
+- **CLI**: query, ingest, transcribe, draft, brief, decisions, graph browse, status, serve
+- **Browser history sync** (Chrome/Firefox)
+- **Meeting transcription** — Whisper transcribes audio → auto-ingested
+- **Smart drafting** — emails in your tone based on retrieved context
+- **Meeting briefs** — per-participant context retrieval
+- **Decision log** — keyword-based search across your ingested corpus
+- **Local file watcher** — polls a directory, ingests new files
+- **Encryption at rest** — AES-256-GCM on all stored content
+- **React dashboard** — web UI for asking questions, browsing the graph, ingesting files
+- **Docker Compose** — single-command full-stack deployment
 
 ---
 
@@ -895,35 +903,44 @@ pytest tests/ -v -m "not integration"
 
 ## Roadmap
 
-### v0.1 — Foundation (current)
-- [ ] Core storage layer (graph, vectors, metadata)
-- [ ] Ingestion pipeline with spaCy NER
-- [ ] Basic RAG query engine via Ollama
-- [ ] FastAPI REST API
-- [ ] Typer CLI
-- [ ] Full test suite
+### ✅ v0.1 — Foundation (done)
+- [x] Core storage layer (graph, vectors, metadata)
+- [x] Ingestion pipeline with spaCy NER
+- [x] Basic RAG query engine via Ollama
+- [x] FastAPI REST API
+- [x] Typer CLI
+- [x] Full test suite
+- [x] AES-256-GCM encryption at rest
 
-### v0.2 — Connectors
-- [ ] Local file watcher (PDF, DOCX, TXT, MD)
-- [ ] Gmail connector (OAuth2)
-- [ ] Google Drive connector
-- [ ] Browser history connector (Chrome/Firefox)
-- [ ] Whisper meeting transcription
+### ✅ v0.2 — Connectors (done, needs polish)
+- [x] Local file watcher (PDF, DOCX, TXT, MD)
+- [x] Gmail connector (OAuth2)
+- [x] Google Drive connector
+- [x] Browser history connector (Chrome/Firefox)
+- [x] Whisper meeting transcription
+- [ ] Safari browser history
+- [ ] Auto-scheduled background sync
 
-### v0.3 — Features
-- [ ] Smart email drafting
-- [ ] Meeting brief generator
-- [ ] Decision log search
-- [ ] React dashboard UI
+### ✅ v0.3 — Features (done, needs polish)
+- [x] Smart email drafting
+- [x] Meeting brief generator
+- [x] Decision log search
+- [x] React dashboard UI
 - [ ] Browser extension (Chrome)
+- [ ] Streaming responses in dashboard
+- [ ] Graph visualization (network view)
 
-### v0.4 — Polish
+### 🔄 v0.4 — Polish (in progress)
 - [ ] Performance benchmarks
-- [ ] Docker container
-- [ ] macOS app bundle
+- [x] Docker container
+- [x] Docker Compose
+- [ ] macOS app bundle (Swift + embedded Ollama)
 - [ ] Windows installer
+- [ ] Connector error recovery & retry logic
+- [ ] GDrive pagination & incremental sync
+- [ ] Persistent decision log storage (not just query-time)
 
-### v1.0 — Enterprise
+### 🔮 v1.0 — Enterprise
 - [ ] Team mode (shared graph, per-user encryption)
 - [ ] Admin panel
 - [ ] Plugin SDK (WASM)
