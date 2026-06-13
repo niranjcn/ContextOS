@@ -7,6 +7,7 @@ and the inference engine. Provides lifecycle events for startup/shutdown.
 
 import logging
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from typing import Optional
 
 from fastapi import FastAPI
@@ -16,37 +17,54 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ---- Module-level singletons (initialized at startup) ---- #
-_engine = None
-_graph_store = None
-_vector_store = None
-_metadata_store = None
-_pipeline = None
+
+@dataclass
+class AppContext:
+    """
+    Container for all application singletons.
+
+    Initialized during the lifespan startup event and reset for testing.
+    """
+
+    engine: Optional[object] = None
+    graph_store: Optional[object] = None
+    vector_store: Optional[object] = None
+    metadata_store: Optional[object] = None
+    pipeline: Optional[object] = None
+
+
+_context = AppContext()
 
 
 def get_engine():
     """Get the ContextEngine singleton."""
-    return _engine
+    return _context.engine
 
 
 def get_graph_store():
     """Get the GraphStore singleton."""
-    return _graph_store
+    return _context.graph_store
 
 
 def get_vector_store():
     """Get the VectorStore singleton."""
-    return _vector_store
+    return _context.vector_store
 
 
 def get_metadata_store():
     """Get the MetadataStore singleton."""
-    return _metadata_store
+    return _context.metadata_store
 
 
 def get_pipeline():
     """Get the IngestionPipeline singleton."""
-    return _pipeline
+    return _context.pipeline
+
+
+def reset_context() -> None:
+    """Reset all singletons (for testing)."""
+    global _context
+    _context = AppContext()
 
 
 @asynccontextmanager
@@ -63,7 +81,7 @@ async def lifespan(app: FastAPI):
     On shutdown:
         - Closes all database connections cleanly.
     """
-    global _engine, _graph_store, _vector_store, _metadata_store, _pipeline
+    global _context
 
     logger.info("ContextOS starting up...")
 
@@ -73,18 +91,18 @@ async def lifespan(app: FastAPI):
         from core.storage.metadata import MetadataStore
         from core.storage.vectors import VectorStore
 
-        _metadata_store = MetadataStore()
-        _graph_store = GraphStore()
-        _vector_store = VectorStore()
+        _context.metadata_store = MetadataStore()
+        _context.graph_store = GraphStore()
+        _context.vector_store = VectorStore()
         logger.info("Storage backends initialized.")
 
         # Initialize ingestion pipeline
         from core.ingestion.pipeline import IngestionPipeline
 
-        _pipeline = IngestionPipeline(
-            vector_store=_vector_store,
-            graph_store=_graph_store,
-            metadata_store=_metadata_store,
+        _context.pipeline = IngestionPipeline(
+            vector_store=_context.vector_store,
+            graph_store=_context.graph_store,
+            metadata_store=_context.metadata_store,
         )
         logger.info("Ingestion pipeline initialized.")
 
@@ -94,17 +112,17 @@ async def lifespan(app: FastAPI):
         from core.inference.retriever import HybridRetriever
 
         retriever = HybridRetriever(
-            graph_store=_graph_store,
-            vector_store=_vector_store,
+            graph_store=_context.graph_store,
+            vector_store=_context.vector_store,
         )
         prompt_builder = PromptBuilder()
-        _engine = ContextEngine(
+        _context.engine = ContextEngine(
             retriever=retriever,
             prompt_builder=prompt_builder,
         )
 
         # Check Ollama status
-        if _engine.is_ready():
+        if _context.engine.is_ready():
             logger.info("Ollama is running and models are available.")
         else:
             logger.warning(
@@ -122,12 +140,12 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("ContextOS shutting down...")
     try:
-        if _graph_store:
-            _graph_store.close()
-        if _vector_store:
-            _vector_store.close()
-        if _metadata_store:
-            _metadata_store.close()
+        if _context.graph_store:
+            _context.graph_store.close()
+        if _context.vector_store:
+            _context.vector_store.close()
+        if _context.metadata_store:
+            _context.metadata_store.close()
         logger.info("All connections closed.")
     except Exception as exc:
         logger.error("Shutdown error: %s", exc)

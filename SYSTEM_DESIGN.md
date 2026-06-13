@@ -891,7 +891,7 @@ Impact of chunk size on retrieval quality:
 **A:** Three things change:
 1. **DBs:** Embedded ChromaDB/Kuzu/SQLite → server-based Qdrant/Neo4j/PostgreSQL for concurrent access
 2. **Auth:** Add OIDC/JWT middleware — currently the API has no auth
-3. **Deployment:** Single process → Kubernetes with HPA (already have the manifests); Ollama runs on GPU nodes
+3. **Deployment:** Single process → Docker Compose with multiple replicas behind a reverse proxy
 The core architecture (hybrid retrieval, ingestion pipeline, prompt building) stays the same.
 
 ### Q: What's the trickiest bug you encountered?

@@ -1,16 +1,13 @@
 # ==============================================================================
-# ContextOS — Docker Compose (Local Development Stack)
+# ContextOS — Docker Compose
 # ==============================================================================
-# Runs the full ContextOS stack locally:
-#   1. Ollama (local LLM server)
-#   2. API (FastAPI backend)
-#   3. Dashboard (React frontend via nginx)
-#   4. Model Puller (one-shot init — downloads the LLM model)
+# One-command local deployment for the full ContextOS stack.
 #
 # Usage:
-#   docker-compose up -d        # Start everything
-#   docker-compose logs -f api  # Follow API logs
-#   docker-compose down         # Stop everything
+#   docker compose up -d              # Start everything
+#   docker compose logs -f api        # Follow API logs
+#   docker compose down               # Stop everything
+#   docker compose down -v            # Stop + delete data volumes
 # ==============================================================================
 
 services:
@@ -18,47 +15,35 @@ services:
   # --------------------------------------------------------------------------
   # Ollama — Local LLM inference server
   # --------------------------------------------------------------------------
-  # Runs the Ollama daemon that serves LLM requests. The API container
-  # connects to this over the Docker network (not localhost).
   ollama:
     image: ollama/ollama:latest
     container_name: contextos-ollama
     volumes:
-      # Persist downloaded models across container restarts.
-      # Without this volume, models would re-download every time.
       - ollama_data:/root/.ollama
     ports:
-      # Expose Ollama on the host so you can also use it directly
-      # (e.g., `ollama run llama3.2` from your terminal).
       - "11434:11434"
     healthcheck:
-      # Verify Ollama is responding before starting dependent services.
-      # /api/tags returns the list of available models.
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
   # Model Puller — One-shot init container
   # --------------------------------------------------------------------------
-  # Downloads the LLM model into Ollama. Runs once then exits.
-  # This pattern ensures the model is ready before the API starts querying it.
+  # Downloads the LLM model into Ollama, exits when done.
+  # The API waits for this to finish before starting.
   model-puller:
     image: ollama/ollama:latest
     container_name: contextos-model-puller
     depends_on:
       ollama:
         condition: service_healthy
-    # Use the Ollama CLI to pull the model. The OLLAMA_HOST env var
-    # tells it to connect to the ollama service, not localhost.
-    command: ollama pull llama3.2
+    command: ollama pull ${OLLAMA_MODEL:-llama3.2}
     environment:
-      # Point to the ollama container by its Docker service name.
-      # Docker Compose creates a network where services resolve by name.
       - OLLAMA_HOST=http://ollama:11434
-    # "no" means don't restart after exiting — this is a one-shot task.
     restart: "no"
 
   # --------------------------------------------------------------------------
@@ -71,37 +56,29 @@ services:
     container_name: contextos-api
     depends_on:
       ollama:
-        # Wait for Ollama to pass its healthcheck before starting the API.
-        # Without this, the API would crash on startup trying to connect.
         condition: service_healthy
+      model-puller:
+        condition: service_completed_successfully
+    env_file:
+      - .env
     environment:
-      # IMPORTANT: Use the Docker service name "ollama", not "localhost".
-      # Inside Docker's network, each service has a DNS entry matching
-      # its service name in this compose file.
       - OLLAMA_HOST=http://ollama:11434
-      # Default model — can be overridden with OLLAMA_MODEL=mistral in .env
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
-      # Sentence-transformers embedding model for vector search
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
-      # ChromaDB storage path (matches the volume mount below)
       - CHROMA_DB_PATH=/data/chroma
-      # Gmail connector — disabled by default (requires OAuth setup)
       - ENABLE_GMAIL=${ENABLE_GMAIL:-false}
+      - ENABLE_ENCRYPTION=${ENABLE_ENCRYPTION:-false}
     volumes:
-      # Persistent storage for ChromaDB, Kuzu graph DB, and any other data.
-      # Named volume = survives `docker-compose down` (but not `down -v`).
       - contextos_data:/data
-      # Mount secrets directory as read-only. The :ro flag prevents the
-      # container from writing to this directory — defense in depth.
       - ./secrets:/app/secrets:ro
     ports:
       - "8000:8000"
     healthcheck:
-      # The /health endpoint should return 200 OK when the API is ready.
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
@@ -114,20 +91,14 @@ services:
     container_name: contextos-dashboard
     depends_on:
       api:
-        # Don't start the dashboard until the API is healthy.
-        # The nginx proxy would return 502 errors otherwise.
         condition: service_healthy
     ports:
-      # Map host port 5173 (Vite's default) to container port 80 (nginx).
-      # Users access http://localhost:5173 just like during development.
       - "5173:80"
     restart: unless-stopped
 
 # ==============================================================================
 # Named Volumes
 # ==============================================================================
-# Docker manages these volumes. They persist across container restarts
-# and `docker-compose down`. Use `docker-compose down -v` to delete them.
 volumes:
   ollama_data:
     driver: local

@@ -20,7 +20,7 @@ COPY package*.json ./
 # - Uses exact versions from package-lock.json (reproducible builds)
 # - Faster than npm install (skips dependency resolution)
 # - Fails if package-lock.json is out of sync (catches mistakes)
-RUN npm install
+RUN npm ci
 
 # Now copy the rest of the source code
 COPY . .

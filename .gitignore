@@ -63,14 +63,6 @@ google_credentials.json
 dashboard/node_modules/
 dashboard/dist/
 
-# Terraform state (contains secrets — NEVER commit)
-*.tfstate
-*.tfstate.backup
-.terraform/
-.terraform.lock.hcl
-*.tfvars
-!*.tfvars.example
-
 # Docker
 docker-compose.override.yml
 

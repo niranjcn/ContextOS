@@ -59,11 +59,12 @@ MASTER_PROMPT.md
 .DS_Store
 Thumbs.db
 
-# Terraform and Kubernetes configs (infrastructure, not application)
-terraform/
-k8s/
-Jenkinsfile
+
+# GitHub Actions CI (not needed at runtime)
 .github/
+
+# Browser extension (separate deliverable, not needed in API container)
+browser-extension/
 
 # Build artifacts
 *.tar.gz

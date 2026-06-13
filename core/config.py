@@ -56,7 +56,14 @@ class Settings:
         self.OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
         self.OLLAMA_FALLBACK_MODEL: str = os.getenv("OLLAMA_FALLBACK_MODEL", "mistral")
-        self.OLLAMA_TIMEOUT: int = int(os.getenv("OLLAMA_TIMEOUT", "120"))
+        raw_timeout = os.getenv("OLLAMA_TIMEOUT", "120")
+        try:
+            self.OLLAMA_TIMEOUT: int = int(raw_timeout)
+        except ValueError:
+            logger.warning(
+                "Invalid OLLAMA_TIMEOUT value '%s', falling back to 120.", raw_timeout
+            )
+            self.OLLAMA_TIMEOUT = 120
 
         # ---- Embedding Settings ----
         self.EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
@@ -186,7 +193,7 @@ class Settings:
 
 def _create_settings() -> Settings:
     """
-    Create a Settings instance, falling back to safe defaults if .env is missing.
+    Create a Settings instance, falling back to safe defaults for specific errors.
 
     Returns:
         A configured Settings instance.
@@ -194,14 +201,17 @@ def _create_settings() -> Settings:
     try:
         return Settings()
     except ConfigurationError as exc:
-        logger.warning(
-            "Configuration issue: %s. "
-            "Some features may be unavailable until configured.",
-            exc,
-        )
-        # Re-create with encryption disabled for development convenience
-        os.environ["ENABLE_ENCRYPTION"] = "false"
-        return Settings()
+        msg = str(exc)
+        if "encryption" in msg.lower() or "CONTEXTOS_ENCRYPTION_KEY" in msg:
+            logger.warning(
+                "Encryption key issue: %s. "
+                "Falling back to encryption disabled.",
+                exc,
+            )
+            os.environ["ENABLE_ENCRYPTION"] = "false"
+            return Settings()
+        logger.error("Configuration error: %s", exc)
+        raise
 
 
 # Singleton settings instance — import this throughout the project

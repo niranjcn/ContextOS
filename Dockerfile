@@ -55,7 +55,8 @@ ENV PATH=/root/.local/bin:$PATH
 
 # Download the spaCy English NLP model at build time so the container
 # starts instantly without needing internet access at runtime.
-RUN pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+# Version pinned to match spaCy 3.7.x compatibility.
+RUN python -m spacy download en_core_web_sm
 
 # Copy the entire project source code into the container.
 WORKDIR /app
@@ -86,12 +87,13 @@ ENV CHROMA_DB_PATH=/data/chroma
 # The API listens on port 8000 (FastAPI/Uvicorn default).
 EXPOSE 8000
 
-# Declare /data as a volume mount point. Docker will warn if you
-# forget to mount a volume here (data would be lost on restart).
-VOLUME ["/data"]
-
 # Switch to the non-root user before running the application.
 USER contextos
+
+# Health check for container orchestrators.
+# The /health endpoint returns 200 when the API and Ollama are ready.
+HEALTHCHECK --start-period=30s --interval=30s --timeout=10s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
 
 # Start the FastAPI application with Uvicorn.
 # --host 0.0.0.0 binds to all interfaces (required inside containers).

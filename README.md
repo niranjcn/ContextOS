@@ -39,7 +39,7 @@ machine. Full stop.
 | **Features** | ~85% | Smart drafting, meeting briefs, decision log search, Whisper transcription (manual install) |
 | **Dashboard** | ~70% | React + Vite UI with query, graph browse, ingest, status tabs — functional but basic |
 | **Tests** | ~95% | 60+ tests covering storage, ingestion, inference, encryption, API |
-| **Infrastructure** | ~80% | Docker ✓, Docker Compose ✓, K8s manifests (templates), Terraform (needs backend config), CI/CD (GitHub Actions + Jenkins) |
+| **Infrastructure** | ~80% | Docker ✓, Docker Compose ✓, CI/CD (GitHub Actions) |
 | **Browser extension** | 0% | Not started |
 | **Desktop builds** | 0% | No macOS/Windows packages yet |
 

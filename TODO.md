@@ -6,11 +6,6 @@ Everything that's not yet implemented or needs polish.
 
 ## Not Started (0%)
 
-### Browser Extension
-- Chrome extension to capture reading context in real time
-- Would inject into the browser's reading flow and push to the ingestion pipeline
-- No code exists yet
-
 ### Desktop Builds
 - **macOS app bundle** — Swift wrapper with embedded Ollama, one-click install
 - **Windows installer** — NSIS or MSI package
@@ -22,6 +17,23 @@ Everything that's not yet implemented or needs polish.
 - **Plugin SDK** — WASM-based plugin system for custom connectors/features
 - **Audit log** — immutable record of all queries and data access
 - **SSO integration** — OIDC/SAML for enterprise auth
+
+---
+
+## In Progress
+
+### Browser Extension
+- **Status**: Scaffolded (Manifest V3, content/background/popup, icons)
+- **What it does**: Captures page content (title, URL, body text) and sends to ContextOS API
+- **What's done**: `manifest.json`, `content.js`, `background.js`, `popup.html`, `popup.js`, placeholder icons
+- **What's missing**:
+  - Error retry/queue mechanism for failed sends
+  - Smart content extraction (readability fork for article-only capture, not full body text)
+  - Configurable capture shortcuts
+  - Icon badge showing number of pending (unsent) captures
+  - Site blacklist (e.g. exclude mail.google.com)
+  - Tab-specific capture toggle
+  - Firefox port (Manifest V3 compatible)
 
 ---
 
@@ -46,16 +58,16 @@ Everything that's not yet implemented or needs polish.
 
 | Feature | Current State | What's Missing |
 |---------|--------------|----------------|
-| **Smart Draft** | Basic retrieval + prompt works | Hardcoded "professional, clear tone"; no real style learning from user's writing; creates its own Ollama client instead of using the engine's singleton |
-| **Meeting Brief** | Per-participant retrieval works | Same redundant Ollama client creation; no calendar integration (date/agenda must be manually provided) |
+| **Smart Draft** | Uses `ContextEngine.generate()`, style examples retrieved | Hardcoded "professional, clear tone" fallback when no style examples found; no real style learning from user's writing via embedding comparison |
+| **Meeting Brief** | Uses `ContextEngine.generate()`, per-participant retrieval | No calendar API integration (date/agenda must be manually provided) |
 | **Decision Log** | Keyword-based search works | No persistent storage — purely query-time keyword matching against ingested docs; no NLP-based classification |
-| **Transcriber** | Whisper integration works | `openai-whisper` commented out in `requirements.txt` on line 3; user must manually install it |
+| **Transcriber** | Whisper integration, `openai-whisper` uncommented in `requirements.txt` | User must manually install ffmpeg on host; not available inside Docker container |
 
 #### Fixes needed:
-- `features/smart_draft.py` — Replace hardcoded tone with actual writing pattern analysis; use `ContextEngine` from `core/inference/engine.py` instead of creating a new Ollama client
-- `features/meeting_brief.py` — Same Ollama client issue; add calendar API integration
-- `features/decision_log.py` — Add persistent `Decision` node type to the Kuzu graph schema
-- `requirements.txt` — Uncomment `openai-whisper` once the build issue is resolved
+- `features/smart_draft.py` — Replace hardcoded tone fallback with actual writing pattern analysis (compare embeddings of user's past writing)
+- `features/meeting_brief.py` — Add calendar API integration (Google Calendar, Outlook)
+- `features/decision_log.py` — Add persistent `Decision` node type to the Kuzu graph schema; classify sentences as decisions via NLP
+- `requirements.txt` — `openai-whisper` is now uncommented; ffmpeg dependency still needs documenting
 
 ### Dashboard (React)
 
@@ -70,7 +82,7 @@ Everything that's not yet implemented or needs polish.
 
 | Area | Coverage | What's Missing |
 |------|----------|---------------|
-| Core engine | 95% | One minor bug in `graph.py:241` (broken f-string for LIMIT clause) |
+| Core engine | 95% | Minor improvements possible in edge case coverage |
 | Connectors | 0% | No tests for any connector (requires actual accounts / browser files) |
 | Features | 0% | No tests for smart_draft, meeting_brief, decision_log, transcriber |
 | Performance | 0% | No benchmark or stress tests |
@@ -78,18 +90,8 @@ Everything that's not yet implemented or needs polish.
 
 ---
 
-## Known Bugs
-
-1. **`core/storage/graph.py:241`** — Broken f-string for the LIMIT clause. The string `"ORDER BY d.date DESC LIMIT {limit}"` is not actually an f-string (the second string literal lacks the `f` prefix due to concatenation). Will cause a Cypher syntax error at runtime.
-
----
-
 ## Infrastructure Gaps
 
 | Area | Issue |
 |------|-------|
-| **K8s secrets** | `k8s/secret.yaml` contains placeholder base64 values — must generate real encryption keys |
-| **K8s registry** | All deployment YAMLs contain `YOUR_REGISTRY/contextos-api:IMAGE_TAG` — must replace with real ECR URLs |
-| **K8s domain** | Ingress host is `contextos.yourdomain.com` — must replace with real domain |
-| **Terraform backend** | S3 backend config is commented out in `terraform/main.tf:37-43` — must uncomment and configure before production use |
-| **Terraform apply order** | `main.tf:299` references `aws_eks_cluster.main.identity[0].oidc[0].issuer` which may fail on first apply (chicken-and-egg with the EKS cluster resource on line 306) |
+*(none — K8s, Terraform, Jenkins removed; CI/CD via GitHub Actions only)*
