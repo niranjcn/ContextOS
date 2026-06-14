@@ -189,6 +189,32 @@ class ModelsResponse(BaseModel):
     models: list[str] = Field(default_factory=list, description="Available model names.")
 
 
+# ---- Agents Models ---- #
+
+
+class AgentInfo(BaseModel):
+    """Describes a single CLI agent / capability."""
+
+    id: str = Field(description="Unique agent identifier.")
+    name: str = Field(description="Display name.")
+    description: str = Field(description="What this agent does.")
+    icon: str = Field(description="Icon identifier.")
+    status: str = Field(description="Current status: ready, offline, error.")
+    modes: list[str] = Field(description="Supported interaction modes.")
+    endpoint: str = Field(description="API endpoint prefix.")
+
+
+class AgentsListResponse(BaseModel):
+    """Response body for the /agents endpoint."""
+
+    model_config = {"protected_namespaces": ()}
+
+    agents: list[AgentInfo] = Field(description="All registered agents.")
+    total: int = Field(description="Total number of agents.")
+    available: int = Field(description="Number of agents currently available.")
+    backend: dict = Field(default_factory=dict, description="Inference backend info.")
+
+
 # ---- Generic Models ---- #
 
 

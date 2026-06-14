@@ -195,8 +195,9 @@ def create_app() -> FastAPI:
     )
 
     # Register routers
-    from core.api.routers import connectors, graph, health, ingest, query
+    from core.api.routers import agents, connectors, graph, health, ingest, query
 
+    app.include_router(agents.router)
     app.include_router(health.router)
     app.include_router(query.router)
     app.include_router(graph.router)

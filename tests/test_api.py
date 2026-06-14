@@ -82,6 +82,27 @@ class TestGraphEndpoint:
         assert response.status_code in (200, 503)
 
 
+class TestAgentsEndpoint:
+    """Tests for the /agents endpoint."""
+
+    def test_agents_list_returns_200(self, test_client):
+        """GET /agents should return 200."""
+        response = test_client.get("/agents")
+        assert response.status_code == 200
+        data = response.json()
+        assert "agents" in data
+        assert "total" in data
+        assert "available" in data
+        assert isinstance(data["agents"], list)
+        assert len(data["agents"]) > 0
+        first = data["agents"][0]
+        assert "id" in first
+        assert "name" in first
+        assert "description" in first
+        assert "status" in first
+        assert "modes" in first
+
+
 class TestRootEndpoint:
     """Tests for the root endpoint."""
 

@@ -98,7 +98,7 @@ export default function QueryBox() {
       <div className="terminal-header">
         <div className="terminal-tabs">
           <button className={`terminal-tab ${mode === 'ask' ? 'terminal-tab-active' : ''}`} onClick={() => setMode('ask')}>
-            ❯ Query
+            💬 Query
           </button>
           <button className={`terminal-tab ${mode === 'draft' ? 'terminal-tab-active' : ''}`} onClick={() => setMode('draft')}>
             ✎ Draft
@@ -114,7 +114,7 @@ export default function QueryBox() {
         {mode === 'ask' && history.length === 0 && (
           <div className="terminal-welcome">
             <div className="terminal-prompt-line">
-              <span className="terminal-prompt">contextos ❯</span> Ask anything about your knowledge base
+              Ask anything about your knowledge base
             </div>
             <div className="terminal-hints">
               <span>"What did Alice decide about the API?"</span>
@@ -127,7 +127,7 @@ export default function QueryBox() {
         {mode === 'ask' && history.map((msg, i) => (
           <div key={i} className={`terminal-message terminal-${msg.role}`}>
             <span className="terminal-prompt">
-              {msg.role === 'user' ? '❯' : '↳'}
+              {msg.role === 'user' ? 'You' : 'AI'}
             </span>
             <span className={`terminal-content ${msg.streaming ? 'terminal-streaming' : ''}`}>
               {msg.content}
@@ -185,7 +185,7 @@ export default function QueryBox() {
 
       <form className="terminal-input-row" onSubmit={handleSubmit}>
         <span className="terminal-input-prompt">
-          {mode === 'ask' ? '❯' : mode === 'draft' ? '✎' : '▸'}
+          {mode === 'ask' ? '>' : mode === 'draft' ? '✎' : '>'}
         </span>
         <input
           className="terminal-input"
@@ -197,7 +197,7 @@ export default function QueryBox() {
           autoFocus
         />
         <button className="terminal-send-btn" type="submit" disabled={loading || !input.trim()}>
-          {loading ? <span className="spinner">◌</span> : '⏎'}
+          {loading ? <span className="spinner">◌</span> : 'Send'}
         </button>
       </form>
     </div>

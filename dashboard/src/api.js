@@ -94,6 +94,9 @@ export const api = {
   deleteConnectorConfig: (name) =>
     request(`/connectors/${encodeURIComponent(name)}/configure`, { method: 'DELETE' }),
 
+  // ---- Agents ----
+  getAgents: () => request('/agents'),
+
   // ---- Health ----
   getHealth: () => request('/health'),
   getModels: () => request('/health/models'),
