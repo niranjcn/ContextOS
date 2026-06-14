@@ -5,10 +5,8 @@ import GraphViewer from './components/GraphViewer'
 import IngestStatus from './components/IngestStatus'
 import StatusPanel from './components/StatusPanel'
 import Connectors from './components/Connectors'
-import Agents from './components/Agents'
 
 const TABS = [
-  { id: 'agents',    label: 'Agents',     icon: '🤖' },
   { id: 'ask',       label: 'Query',      icon: '💬' },
   { id: 'ingest',    label: 'Ingest',     icon: '📤' },
   { id: 'graph',     label: 'Graph',      icon: '🕸' },
@@ -17,13 +15,11 @@ const TABS = [
 ]
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('agents')
+  const [activeTab, setActiveTab] = useState('ask')
   const [health, setHealth] = useState(null)
-  const [agentsCount, setAgentsCount] = useState(null)
 
   useEffect(() => {
     fetchHealth()
-    fetchAgents()
     const interval = setInterval(fetchHealth, 15000)
     return () => clearInterval(interval)
   }, [])
@@ -44,15 +40,6 @@ export default function App() {
     }
   }
 
-  async function fetchAgents() {
-    try {
-      const data = await api.getAgents()
-      setAgentsCount(data.available ?? null)
-    } catch {
-      /* silent */
-    }
-  }
-
   const statusClass =
     health?.status === 'healthy'  ? 'healthy' :
     health?.status === 'degraded' ? 'degraded' : 'offline'
@@ -66,25 +53,17 @@ export default function App() {
           </h1>
           <p className="tagline">Private AI Memory Layer — Control Panel</p>
         </div>
-        <div className="header-right">
-          {agentsCount !== null && (
-            <div className="header-meta">
-              <span className="meta-agents">{agentsCount} agents ready</span>
-              <span className="meta-sep">·</span>
-            </div>
-          )}
-          <div className={`status-badge ${statusClass}`}>
-            <span className="status-dot" />
-            {health?.status || 'Connecting…'}
-          </div>
+        <div className={`status-badge ${statusClass}`}>
+          <span className="status-dot" />
+          {health?.status || 'Connecting…'}
         </div>
       </header>
 
       <div className="stat-grid">
         <div className="stat-card">
-          <div className="stat-label">LLM Backend</div>
+          <div className="stat-label">Ollama</div>
           <div className={`stat-value ${health?.ollama_running ? 'text-success' : 'text-error'}`}>
-            {health?.ollama_running ? 'Online' : 'Offline'}
+            {health?.ollama_running ? '✓ Running' : '✗ Offline'}
           </div>
         </div>
         <div className="stat-card">
@@ -96,7 +75,7 @@ export default function App() {
           <div className="stat-value">{health?.graph_node_count?.toLocaleString() ?? '—'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">LLM Models</div>
+          <div className="stat-label">Models</div>
           <div className="stat-value">{health?.models_available?.length ?? 0}</div>
         </div>
       </div>
@@ -117,7 +96,6 @@ export default function App() {
       </nav>
 
       <main className="tab-content">
-        {activeTab === 'agents'     && <Agents />}
         {activeTab === 'ask'        && <QueryBox />}
         {activeTab === 'ingest'     && <IngestStatus />}
         {activeTab === 'graph'      && <GraphViewer />}

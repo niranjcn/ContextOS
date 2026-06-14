@@ -86,21 +86,22 @@ class TestAgentsEndpoint:
     """Tests for the /agents endpoint."""
 
     def test_agents_list_returns_200(self, test_client):
-        """GET /agents should return 200."""
+        """GET /agents should return 200 with offline agents."""
         response = test_client.get("/agents")
         assert response.status_code == 200
         data = response.json()
         assert "agents" in data
         assert "total" in data
-        assert "available" in data
+        assert "backend_ready" in data
         assert isinstance(data["agents"], list)
-        assert len(data["agents"]) > 0
+        assert data["total"] > 0
         first = data["agents"][0]
         assert "id" in first
         assert "name" in first
         assert "description" in first
         assert "status" in first
-        assert "modes" in first
+        assert "icon" in first
+        assert "mode" in first
 
 
 class TestRootEndpoint:

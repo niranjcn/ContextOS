@@ -91,6 +91,7 @@ async def list_models() -> ModelsResponse:
     engine = get_engine()
     models: list[str] = []
     if engine:
-        models = engine.get_available_models()
+        info = engine.get_backend_info()
+    models = info.get("models_available", [])
 
     return ModelsResponse(models=models)

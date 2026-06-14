@@ -141,8 +141,7 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
         async def generate():
             """Generate streaming response chunks."""
             try:
-                for chunk in stream:
-                    content = chunk.get("message", {}).get("content", "")
+                for content in stream:
                     if content:
                         yield content
             except Exception as exc:

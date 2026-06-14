@@ -1,14 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { api } from '../api'
 
+const STORAGE_KEY = 'contextos_query_history'
+
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : { history: [], draftResult: null, briefResult: null }
+  } catch { return { history: [], draftResult: null, briefResult: null } }
+}
+
 export default function QueryBox() {
-  const [history, setHistory] = useState([])
+  const [persisted] = useState(loadPersisted)
+  const [history, setHistory] = useState(persisted.history)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState('ask')
-  const [draftResult, setDraftResult] = useState(null)
-  const [briefResult, setBriefResult] = useState(null)
+  const [draftResult, setDraftResult] = useState(persisted.draftResult)
+  const [briefResult, setBriefResult] = useState(persisted.briefResult)
   const bottomRef = useRef(null)
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ history, draftResult, briefResult }))
+  }, [history, draftResult, briefResult])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -86,6 +100,7 @@ export default function QueryBox() {
     setHistory([])
     setDraftResult(null)
     setBriefResult(null)
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   const placeholder =
